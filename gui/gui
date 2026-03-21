@@ -1,0 +1,158 @@
+import sys
+import os
+from PySide6.QtWidgets import (
+    QApplication, QMainWindow, QWidget, QVBoxLayout,
+    QHBoxLayout, QLabel, QPushButton, QLineEdit,
+    QFileDialog, QProgressBar, QMessageBox
+)
+from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtGui import QFont
+
+from leapfrog_dose import run_analysis
+from report_generator import generate_pdf_report
+
+
+class WorkerThread(QThread):
+    finished = Signal(str)
+    error = Signal(str)
+
+    def __init__(self, csv_path, facility_name, output_path):
+        super().__init__()
+        self.csv_path = csv_path
+        self.facility_name = facility_name
+        self.output_path = output_path
+
+    def run(self):
+        try:
+            results, df = run_analysis(self.csv_path, self.facility_name)
+            generate_pdf_report(results, df, self.output_path)
+            self.finished.emit(self.output_path)
+        except Exception as e:
+            self.error.emit(str(e))
+
+
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("GammaMetric — CT Dose Analytics")
+        self.setMinimumWidth(520)
+        self.csv_path = ""
+
+        central = QWidget()
+        self.setCentralWidget(central)
+        layout = QVBoxLayout(central)
+        layout.setSpacing(16)
+        layout.setContentsMargins(32, 32, 32, 32)
+
+        # Header
+        title = QLabel("GammaMetric")
+        title.setFont(QFont("Georgia", 22))
+        title.setAlignment(Qt.AlignCenter)
+        layout.addWidget(title)
+
+        subtitle = QLabel("CT Dose Analytics & Leapfrog Compliance Reporting")
+        subtitle.setAlignment(Qt.AlignCenter)
+        subtitle.setStyleSheet("color: gray; font-size: 11px;")
+        layout.addWidget(subtitle)
+
+        layout.addSpacing(16)
+
+        # CSV file picker
+        layout.addWidget(QLabel("Dose Data CSV:"))
+        file_row = QHBoxLayout()
+        self.file_label = QLineEdit()
+        self.file_label.setPlaceholderText("Select CSV export from Radimetrics, DoseWatch, etc.")
+        self.file_label.setReadOnly(True)
+        file_row.addWidget(self.file_label)
+        browse_btn = QPushButton("Browse")
+        browse_btn.clicked.connect(self.browse_csv)
+        file_row.addWidget(browse_btn)
+        layout.addLayout(file_row)
+
+        # Facility name
+        layout.addWidget(QLabel("Facility Name:"))
+        self.facility_input = QLineEdit()
+        self.facility_input.setPlaceholderText("e.g. Memorial Regional Hospital")
+        layout.addWidget(self.facility_input)
+
+        layout.addSpacing(8)
+
+        # Generate button
+        self.run_btn = QPushButton("Generate Report")
+        self.run_btn.setFixedHeight(44)
+        self.run_btn.setStyleSheet(
+            "QPushButton { background-color: #1a1a1a; color: white; "
+            "font-size: 14px; border-radius: 4px; }"
+            "QPushButton:hover { background-color: #333; }"
+            "QPushButton:disabled { background-color: #aaa; }"
+        )
+        self.run_btn.clicked.connect(self.generate_report)
+        layout.addWidget(self.run_btn)
+
+        # Progress bar
+        self.progress = QProgressBar()
+        self.progress.setRange(0, 0)  # Indeterminate
+        self.progress.setVisible(False)
+        layout.addWidget(self.progress)
+
+        # Status
+        self.status_label = QLabel("")
+        self.status_label.setAlignment(Qt.AlignCenter)
+        self.status_label.setStyleSheet("color: gray; font-size: 11px;")
+        layout.addWidget(self.status_label)
+
+    def browse_csv(self):
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Select CSV File", "", "CSV Files (*.csv);;All Files (*)"
+        )
+        if path:
+            self.csv_path = path
+            self.file_label.setText(path)
+
+    def generate_report(self):
+        if not self.csv_path:
+            QMessageBox.warning(self, "Missing File", "Please select a CSV file.")
+            return
+        facility = self.facility_input.text().strip()
+        if not facility:
+            QMessageBox.warning(self, "Missing Name", "Please enter a facility name.")
+            return
+
+        safe_name = facility.replace(" ", "_").replace("/", "_")
+        output_path = os.path.join(os.path.dirname(self.csv_path),
+                                   f"{safe_name}_leapfrog_report.pdf")
+
+        self.run_btn.setEnabled(False)
+        self.progress.setVisible(True)
+        self.status_label.setText("Analyzing dose data...")
+
+        self.worker = WorkerThread(self.csv_path, facility, output_path)
+        self.worker.finished.connect(self.on_success)
+        self.worker.error.connect(self.on_error)
+        self.worker.start()
+
+    def on_success(self, pdf_path):
+        self.progress.setVisible(False)
+        self.run_btn.setEnabled(True)
+        self.status_label.setText(f"Report saved: {pdf_path}")
+        reply = QMessageBox.question(
+            self, "Report Ready",
+            f"Report generated successfully.\n\nOpen it now?",
+            QMessageBox.Yes | QMessageBox.No
+        )
+        if reply == QMessageBox.Yes:
+            os.startfile(pdf_path)
+
+    def on_error(self, error_msg):
+        self.progress.setVisible(False)
+        self.run_btn.setEnabled(True)
+        self.status_label.setText("Error — see details below")
+        QMessageBox.critical(self, "Error", f"Analysis failed:\n\n{error_msg}")
+
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    app.setStyle("Fusion")
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec())
