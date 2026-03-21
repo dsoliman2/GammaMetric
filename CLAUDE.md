@@ -83,6 +83,15 @@ LIDC-IDRI cases used in preprint: LIDC-0009, LIDC-IDRI-0001, 0002, 0087, 0089,
 - Leapfrog reports use routine-only exam subsets per Section 8B spec
 
 ## Current Priorities
+1. Preprint submitted to arXiv — monitor for feedback, prepare for journal submission
+2. GammaMetric business development — RAI (Daytona Beach) top prospect
+
+## Long-Term Vision
+1. **SaaS AI detection pipeline** — productize the validation/inference pipeline
+   into a deployable service for CT lung nodule detection, expanding to MRI and
+   other modalities over time
+2. **Budget-friendly dose analytics platform** — a community hospital alternative
+   to Radimetrics/DoseWatch; LeapfrogDose is the foundation of this product
 1. Finalize preprint — run sensitivity analyses at varying consensus thresholds
    before submission (threshold_sensitivity_analysis.py)
 2. GammaMetric business development — RAI (Daytona Beach) top prospect
