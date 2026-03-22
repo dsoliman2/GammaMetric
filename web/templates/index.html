@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LeapfrogDose — CT Dose Analytics</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:   #0f2342;
+      --blue:   #1a56b0;
+      --blue-lt:#e8f0fb;
+      --slate:  #475569;
+      --muted:  #94a3b8;
+      --border: #e2e8f0;
+      --bg:     #f8fafc;
+      --white:  #ffffff;
+      --radius: 10px;
+    }
+
+    body {
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: #1e293b;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--navy);
+      padding: 0 2.5rem;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      text-decoration: none;
+    }
+    .logo-mark {
+      width: 32px; height: 32px;
+      background: var(--blue);
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.95rem; font-weight: 800; color: white;
+      letter-spacing: -0.03em;
+    }
+    .logo-text { color: white; font-size: 1.05rem; font-weight: 700; letter-spacing: -0.02em; }
+    .logo-text span { color: var(--muted); font-weight: 400; margin-left: 0.35rem; font-size: 0.8rem; }
+    nav { font-size: 0.8rem; color: var(--muted); }
+
+    /* ── Hero ── */
+    .hero {
+      background: var(--navy);
+      padding: 4rem 2.5rem 5rem;
+      text-align: center;
+      color: white;
+    }
+    .hero h1 {
+      font-size: 2.1rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.75rem;
+      line-height: 1.15;
+    }
+    .hero h1 em { color: #60a5fa; font-style: normal; }
+    .hero p {
+      font-size: 1rem;
+      color: #94a3b8;
+      max-width: 480px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* ── Card ── */
+    main {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      padding: 0 1rem 4rem;
+      margin-top: -2.5rem;
+    }
+    .card {
+      background: var(--white);
+      border-radius: 14px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+      padding: 2.25rem 2rem;
+      width: 100%;
+      max-width: 520px;
+      height: fit-content;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--slate);
+      margin-bottom: 0.4rem;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 0.65rem 0.85rem;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.95rem;
+      color: #1e293b;
+      margin-bottom: 1.4rem;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      background: var(--white);
+    }
+    input[type="text"]:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(26,86,176,0.12);
+    }
+
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 10px;
+      padding: 2.25rem 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      margin-bottom: 1.4rem;
+      background: var(--bg);
+    }
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: var(--blue);
+      background: var(--blue-lt);
+    }
+    .drop-zone .dz-icon {
+      width: 44px; height: 44px;
+      background: var(--blue-lt);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 0.85rem;
+      font-size: 1.2rem;
+    }
+    .drop-zone p { font-size: 0.875rem; color: var(--slate); line-height: 1.5; }
+    .drop-zone p strong { color: var(--blue); }
+    .drop-zone .dz-hint { font-size: 0.75rem; color: var(--muted); margin-top: 0.35rem; }
+    .drop-zone .dz-filename {
+      margin-top: 0.6rem;
+      font-size: 0.82rem;
+      color: var(--blue);
+      font-weight: 600;
+    }
+    input[type="file"] { display: none; }
+
+    .btn-primary {
+      width: 100%;
+      padding: 0.8rem;
+      background: var(--blue);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, box-shadow 0.15s;
+      letter-spacing: -0.01em;
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: #1648a0;
+      box-shadow: 0 2px 8px rgba(26,86,176,0.3);
+    }
+    .btn-primary:disabled { background: var(--muted); cursor: not-allowed; }
+
+    .trust-row {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      margin-top: 1.25rem;
+      flex-wrap: wrap;
+    }
+    .trust-item {
+      font-size: 0.75rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+    .trust-item::before { content: "✓"; color: #22c55e; font-weight: 700; }
+
+    /* ── Features strip ── */
+    .features {
+      background: var(--white);
+      border-top: 1px solid var(--border);
+      padding: 3rem 2rem;
+    }
+    .features-inner {
+      max-width: 820px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 2rem;
+    }
+    .feature h4 { font-size: 0.9rem; font-weight: 700; margin-bottom: 0.3rem; }
+    .feature p { font-size: 0.82rem; color: var(--slate); line-height: 1.55; }
+    .feature-icon {
+      width: 36px; height: 36px;
+      background: var(--blue-lt);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+      margin-bottom: 0.65rem;
+    }
+
+    footer {
+      background: var(--navy);
+      color: var(--muted);
+      text-align: center;
+      padding: 1.25rem;
+      font-size: 0.78rem;
+    }
+
+    .spinner-dots { display: none; letter-spacing: 0.05em; }
+    button.loading .spinner-dots { display: inline; }
+    button.loading .btn-label { display: none; }
+  </style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="/">
+    <div class="logo-mark">&#947;</div>
+    <div class="logo-text">LeapfrogDose <span>by GammaMetric</span></div>
+  </a>
+  <nav>CT Dose Analytics &amp; Leapfrog Section 8B Reporting</nav>
+</header>
+
+<div class="hero">
+  <h1>Leapfrog Section 8B reports<br>in <em>seconds</em>, not hours</h1>
+  <p>Upload your Radimetrics export. Get a benchmark-ready CT dose report
+     with ACR DIR comparisons, pediatric strata, and outlier flags.</p>
+</div>
+
+<main>
+  <div class="card">
+    <form method="post" action="/analyze" enctype="multipart/form-data" id="upload-form">
+
+      <label class="form-label" for="facility_name">Facility Name</label>
+      <input type="text" id="facility_name" name="facility_name"
+             placeholder="e.g. Coastal Radiology Associates" autocomplete="organization">
+
+      <label class="form-label">Dose Data CSV</label>
+      <div class="drop-zone" id="drop-zone">
+        <div class="dz-icon">&#128196;</div>
+        <p><strong>Click to browse</strong> or drag &amp; drop your file</p>
+        <p class="dz-hint">Radimetrics CSV export &bull; UTF-8, Latin-1, or CP1252</p>
+        <div class="dz-filename" id="file-name"></div>
+        <input type="file" id="file-input" name="file" accept=".csv" required>
+      </div>
+
+      {% if email_enabled %}
+      <label class="form-label" for="email">Email report to (optional)</label>
+      <input type="text" id="email" name="email" placeholder="you@facility.com" autocomplete="email">
+      {% endif %}
+
+      <button type="submit" class="btn-primary" id="submit-btn">
+        <span class="btn-label">Generate Report</span>
+        <span class="spinner-dots">Analyzing&#8230;</span>
+      </button>
+
+    </form>
+
+    <div class="trust-row">
+      <span class="trust-item">No data stored</span>
+      <span class="trust-item">Processed in memory</span>
+      <span class="trust-item">ACR DIR benchmarks</span>
+    </div>
+  </div>
+</main>
+
+<div class="features">
+  <div class="features-inner">
+    <div class="feature">
+      <div class="feature-icon">&#128202;</div>
+      <h4>Benchmark Comparisons</h4>
+      <p>Facility percentiles compared against ACR DIR 2023–2024 national reference values for all major body regions.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">&#128100;</div>
+      <h4>Pediatric Strata</h4>
+      <p>Automatic age-group classification per Leapfrog spec (&lt;1, 1–4, 5–9, 10–14, 15–17) with minimum-N flagging.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">&#9888;</div>
+      <h4>Outlier Detection</h4>
+      <p>Individual exams exceeding 2&times; regional 75th percentile are surfaced automatically for review.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">&#128438;</div>
+      <h4>Print-Ready PDF</h4>
+      <p>One-click PDF export via browser print. Clean layout, no toolbar, ready to attach to your Leapfrog submission.</p>
+    </div>
+  </div>
+</div>
+
+<footer>
+  &copy; 2026 GammaMetric &mdash; Daniel Soliman, MS, DABR(eligible) &mdash; Medical Physics Consulting
+</footer>
+
+<script>
+  const dropZone  = document.getElementById('drop-zone');
+  const fileInput = document.getElementById('file-input');
+  const fileName  = document.getElementById('file-name');
+  const form      = document.getElementById('upload-form');
+  const submitBtn = document.getElementById('submit-btn');
+
+  dropZone.addEventListener('click', () => fileInput.click());
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) fileName.textContent = fileInput.files[0].name;
+  });
+
+  ['dragover','dragenter'].forEach(e =>
+    dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.add('dragover'); })
+  );
+  ['dragleave','drop'].forEach(e =>
+    dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.remove('dragover'); })
+  );
+  dropZone.addEventListener('drop', e => {
+    const f = e.dataTransfer.files[0];
+    if (f) {
+      const dt = new DataTransfer(); dt.items.add(f);
+      fileInput.files = dt.files;
+      fileName.textContent = f.name;
+    }
+  });
+
+  form.addEventListener('submit', () => {
+    submitBtn.disabled = true;
+    submitBtn.classList.add('loading');
+  });
+</script>
+</body>
+</html>

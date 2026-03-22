@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CT Dose Report — {{ results.facility_name }}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:     #0f2342;
+      --blue:     #1a56b0;
+      --blue-lt:  #e8f0fb;
+      --slate:    #475569;
+      --muted:    #94a3b8;
+      --border:   #e2e8f0;
+      --bg:       #f8fafc;
+      --white:    #ffffff;
+
+      --green-bg: #dcfce7; --green-fg: #166534;
+      --yellow-bg:#fef3c7; --yellow-fg:#92400e;
+      --red-bg:   #fee2e2; --red-fg:   #991b1b;
+      --gray-bg:  #f1f5f9; --gray-fg:  #64748b;
+    }
+
+    body {
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: #1e293b;
+      font-size: 14px;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--navy);
+      padding: 0 2.5rem;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; }
+    .logo-mark {
+      width: 32px; height: 32px;
+      background: var(--blue);
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.95rem; font-weight: 800; color: white;
+    }
+    .logo-text { color: white; font-size: 1.05rem; font-weight: 700; letter-spacing: -0.02em; }
+    .logo-text span { color: var(--muted); font-weight: 400; margin-left: 0.35rem; font-size: 0.8rem; }
+
+    /* ── Toolbar ── */
+    .toolbar {
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      padding: 0.6rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .toolbar a {
+      font-size: 0.82rem;
+      color: var(--blue);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+    .toolbar a:hover { text-decoration: underline; }
+    .btn-print {
+      margin-left: auto;
+      padding: 0.42rem 1rem;
+      background: var(--blue);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .btn-print:hover { background: #1648a0; }
+
+    /* ── Layout ── */
+    main {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+    }
+
+    /* ── Report identity block ── */
+    .report-id {
+      background: var(--white);
+      border-radius: 12px;
+      box-shadow: 0 1px 8px rgba(0,0,0,0.07);
+      padding: 1.75rem 2rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1.5rem;
+    }
+    .report-id-left h2 {
+      font-size: 1.35rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.15rem;
+    }
+    .report-id-left .subtitle {
+      font-size: 0.82rem;
+      color: var(--slate);
+    }
+    .meta-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.85rem;
+    }
+    .meta-pill {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 0.22rem 0.7rem;
+      font-size: 0.75rem;
+      color: var(--slate);
+      font-weight: 500;
+    }
+    .summary-right {
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .summary-right .overall-badge {
+      display: inline-block;
+      padding: 0.35rem 1rem;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .badge-pass   { background: var(--green-bg); color: var(--green-fg); }
+    .badge-caution{ background: var(--yellow-bg); color: var(--yellow-fg); }
+    .badge-fail   { background: var(--red-bg); color: var(--red-fg); }
+
+    .summary-stats {
+      margin-top: 0.75rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem 1rem;
+      text-align: right;
+    }
+    .stat-item .stat-val {
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+    .stat-item .stat-lbl {
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* ── Section ── */
+    section { margin-bottom: 2rem; }
+    .section-heading {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 0.65rem;
+      padding-left: 0.25rem;
+    }
+
+    .card {
+      background: var(--white);
+      border-radius: 12px;
+      box-shadow: 0 1px 8px rgba(0,0,0,0.07);
+      overflow: hidden;
+    }
+
+    /* ── Tables ── */
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      background: #f8fafc;
+      padding: 0.6rem 1.1rem;
+      text-align: left;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--slate);
+      border-bottom: 1px solid var(--border);
+    }
+    thead th.r { text-align: right; }
+
+    tbody tr { border-bottom: 1px solid #f1f5f9; }
+    tbody tr:last-child { border-bottom: none; }
+    td { padding: 0.7rem 1.1rem; vertical-align: middle; }
+    td.r { text-align: right; font-variant-numeric: tabular-nums; }
+
+    .region-name { font-weight: 700; font-size: 0.9rem; }
+
+    /* Facility value vs benchmark coloring */
+    .val-above { color: #dc2626; font-weight: 600; }
+    .val-ok    { color: #16a34a; font-weight: 600; }
+
+    /* Benchmark ghost row */
+    .bench-row { background: #fafbfc; }
+    .bench-row td {
+      padding: 0.3rem 1.1rem 0.55rem;
+      font-size: 0.75rem;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+    .bench-label { font-weight: 500; }
+
+    /* Delta pill */
+    .delta {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.08rem 0.45rem;
+      border-radius: 999px;
+      margin-left: 0.3rem;
+    }
+    .delta-up   { background: #fee2e2; color: #991b1b; }
+    .delta-down { background: #dcfce7; color: #166534; }
+    .delta-flat { background: #f1f5f9; color: var(--slate); }
+
+    /* Status badge */
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.22rem 0.65rem;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      white-space: nowrap;
+      letter-spacing: 0.01em;
+    }
+    .s-excellent  { background: var(--green-bg);  color: var(--green-fg); }
+    .s-good       { background: #d1fae5;           color: #065f46; }
+    .s-acceptable { background: var(--yellow-bg);  color: var(--yellow-fg); }
+    .s-above      { background: var(--red-bg);     color: var(--red-fg); }
+    .s-na         { background: var(--gray-bg);    color: var(--gray-fg); }
+
+    .low-n { font-size: 0.7rem; color: var(--muted); font-style: italic; }
+
+    /* Outlier table */
+    .outlier-dlp { color: #dc2626; font-weight: 700; }
+
+    /* Divider */
+    .region-divider td {
+      padding: 0;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── Footer ── */
+    .report-footer {
+      margin-top: 2.5rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 1rem;
+    }
+    .report-footer p {
+      font-size: 0.72rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    .report-footer .footer-logo {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--navy);
+      white-space: nowrap;
+    }
+
+    /* ── Print ── */
+    @media print {
+      .toolbar { display: none; }
+      body { background: white; font-size: 12px; }
+      .card { box-shadow: none; border: 1px solid var(--border); }
+      .report-id { box-shadow: none; border: 1px solid var(--border); }
+      main { padding: 1.5rem 0; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="/">
+    <div class="logo-mark">&#947;</div>
+    <div class="logo-text">LeapfrogDose <span>by GammaMetric</span></div>
+  </a>
+</header>
+
+<div class="toolbar">
+  <a href="/">&#8592; New analysis</a>
+  <button class="btn-print" onclick="window.print()">&#128438; &nbsp;Save as PDF</button>
+</div>
+
+<main>
+
+  <!-- ── Identity ── -->
+  <div class="report-id">
+    <div class="report-id-left">
+      <h2>{{ results.facility_name }}</h2>
+      <div class="subtitle">Leapfrog Section 8B — CT Dose Compliance Report</div>
+      <div class="meta-pills">
+        <span class="meta-pill">Analysis: {{ results.analysis_date[:10] }}</span>
+        {% if results.date_range.start %}
+        <span class="meta-pill">Data: {{ results.date_range.start[:10] }} – {{ results.date_range.end[:10] }}</span>
+        {% endif %}
+        <span class="meta-pill">{{ results.total_exams }} exams</span>
+        {% for scanner in results.scanners %}
+        <span class="meta-pill">{{ scanner }}</span>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="summary-right">
+      {% set n_above = results.summary.regions_above_benchmark %}
+      {% if n_above == 0 %}
+        <div class="overall-badge badge-pass">&#10003;&nbsp; All Regions Within Benchmark</div>
+      {% elif n_above == 1 %}
+        <div class="overall-badge badge-caution">&#9888;&nbsp; 1 Region Above Benchmark</div>
+      {% else %}
+        <div class="overall-badge badge-fail">&#9888;&nbsp; {{ n_above }} Regions Above Benchmark</div>
+      {% endif %}
+
+      <div class="summary-stats">
+        <div class="stat-item">
+          <div class="stat-val">{{ results.summary.total_adult_exams }}</div>
+          <div class="stat-lbl">Adult</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-val">{{ results.summary.total_peds_exams }}</div>
+          <div class="stat-lbl">Pediatric</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-val">{{ results.summary.regions_analyzed }}</div>
+          <div class="stat-lbl">Regions</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-val">{{ results.summary.total_outliers }}</div>
+          <div class="stat-lbl">Outliers</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Adult ── -->
+  <section>
+    <div class="section-heading">Adult CT Dose Results &mdash; DLP (mGy&middot;cm)</div>
+    {% if results.adult %}
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:22%">Body Region</th>
+            <th class="r" style="width:6%">N</th>
+            <th class="r" style="width:12%">P25</th>
+            <th class="r" style="width:16%">P50 Median</th>
+            <th class="r" style="width:12%">P75</th>
+            <th style="width:18%">vs. National</th>
+            <th style="width:14%">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for region, data in results.adult.items() %}
+          {% set s = data.stats %}
+          {% set bc = data.benchmark_comparison %}
+          {% set status = bc.status %}
+          {% set pct = bc.pct_vs_national_median if bc.pct_vs_national_median is defined else none %}
+
+          <tr>
+            <td class="region-name">{{ region }}</td>
+            <td class="r">{{ s.n }}</td>
+            <td class="r">{{ "%.0f"|format(s.p25) }}</td>
+            <td class="r">
+              {{ "%.0f"|format(s.p50) }}
+              {% if pct is not none %}
+                {% if pct > 5 %}
+                  <span class="delta delta-up">+{{ "%.0f"|format(pct) }}%</span>
+                {% elif pct < -5 %}
+                  <span class="delta delta-down">{{ "%.0f"|format(pct) }}%</span>
+                {% else %}
+                  <span class="delta delta-flat">~0%</span>
+                {% endif %}
+              {% endif %}
+            </td>
+            <td class="r {% if bc.benchmarks and s.p75 > bc.benchmarks.p75 %}val-above{% endif %}">
+              {{ "%.0f"|format(s.p75) }}
+            </td>
+            <td>
+              {% if bc.benchmarks %}
+              <div style="font-size:0.72rem; color:var(--muted);">
+                Nat. median: {{ bc.benchmarks.p50 }}<br>
+                Nat. P75: {{ bc.benchmarks.p75 }}
+              </div>
+              {% endif %}
+            </td>
+            <td>
+              {% if status == "EXCELLENT" %}
+                <span class="status s-excellent">&#10003; Excellent</span>
+              {% elif status == "GOOD" %}
+                <span class="status s-good">&#10003; Good</span>
+              {% elif status == "ACCEPTABLE" %}
+                <span class="status s-acceptable">&#126; Acceptable</span>
+              {% elif status == "ABOVE BENCHMARK" %}
+                <span class="status s-above">&#9650; Above</span>
+              {% else %}
+                <span class="status s-na">{{ status }}</span>
+              {% endif %}
+            </td>
+          </tr>
+
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="card" style="padding:2rem; text-align:center; color:var(--muted);">No adult exam data found.</div>
+    {% endif %}
+  </section>
+
+  <!-- ── Pediatric ── -->
+  {% if results.pediatric %}
+  <section>
+    <div class="section-heading">Pediatric CT Dose Results &mdash; DLP (mGy&middot;cm)</div>
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:22%">Body Region</th>
+            <th style="width:10%">Age Group</th>
+            <th class="r" style="width:6%">N</th>
+            <th class="r">P25</th>
+            <th class="r">P50</th>
+            <th class="r">P75</th>
+            <th style="width:16%">National Ref.</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for region, age_data in results.pediatric.items() %}
+          {% for age_grp, data in age_data.items() %}
+          {% set s = data.stats %}
+          {% set bc = data.benchmark_comparison %}
+          <tr>
+            <td class="region-name">{{ region }}</td>
+            <td>{{ age_grp }}</td>
+            <td class="r">{{ s.n }}</td>
+            <td class="r">{{ "%.0f"|format(s.p25) }}</td>
+            <td class="r">{{ "%.0f"|format(s.p50) }}</td>
+            <td class="r {% if bc.benchmarks and s.p75 > bc.benchmarks.p75 %}val-above{% endif %}">
+              {{ "%.0f"|format(s.p75) }}
+            </td>
+            <td>
+              {% if bc.benchmarks %}
+              <div style="font-size:0.72rem; color:var(--muted);">
+                P50: {{ bc.benchmarks.p50 }} / P75: {{ bc.benchmarks.p75 }}
+              </div>
+              {% endif %}
+            </td>
+            <td>
+              {% if data.low_n %}
+                <span class="status s-na">Insuff. N</span>
+              {% elif bc.status == "EXCELLENT" %}
+                <span class="status s-excellent">&#10003; Excellent</span>
+              {% elif bc.status == "GOOD" %}
+                <span class="status s-good">&#10003; Good</span>
+              {% elif bc.status == "ACCEPTABLE" %}
+                <span class="status s-acceptable">&#126; Acceptable</span>
+              {% elif bc.status == "ABOVE BENCHMARK" %}
+                <span class="status s-above">&#9650; Above</span>
+              {% else %}
+                <span class="status s-na">{{ bc.status }}</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- ── Outliers ── -->
+  {% if results.outliers %}
+  <section>
+    <div class="section-heading">Flagged Exams &mdash; DLP exceeds 2&times; regional 75th percentile</div>
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>Region</th>
+            <th class="r">DLP (mGy&middot;cm)</th>
+            <th class="r">Threshold</th>
+            <th class="r">Ratio</th>
+            <th>Date</th>
+            <th>Protocol</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for o in results.outliers %}
+          <tr>
+            <td>{{ o.region }}</td>
+            <td class="r outlier-dlp">{{ "%.0f"|format(o.dlp) }}</td>
+            <td class="r">{{ "%.0f"|format(o.threshold) }}</td>
+            <td class="r" style="color:var(--slate);">{{ "%.1f"|format(o.dlp / o.threshold) }}&times;</td>
+            <td>{{ o.exam_date[:10] if o.exam_date else "—" }}</td>
+            <td style="color:var(--slate);">{{ o.study_description[:55] }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- ── Data Quality ── -->
+  {% if col_info.optional_missing or col_info.critical_missing %}
+  <section>
+    <div class="section-heading">Data Coverage</div>
+    <div class="card" style="padding: 1rem 1.25rem;">
+      <div style="display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;">
+        {% for f in col_info.found %}
+        <span style="background:#dcfce7; color:#166534; font-size:0.72rem; font-weight:600;
+                     padding:0.18rem 0.55rem; border-radius:999px;">&#10003; {{ f }}</span>
+        {% endfor %}
+        {% for f in col_info.critical_missing %}
+        <span style="background:#fee2e2; color:#991b1b; font-size:0.72rem; font-weight:600;
+                     padding:0.18rem 0.55rem; border-radius:999px;">&#9888; {{ f }} (missing)</span>
+        {% endfor %}
+        {% for f in col_info.optional_missing %}
+        <span style="background:#f1f5f9; color:#64748b; font-size:0.72rem; font-weight:500;
+                     padding:0.18rem 0.55rem; border-radius:999px;">{{ f }} (not found)</span>
+        {% endfor %}
+      </div>
+      {% if col_info.optional_missing %}
+      <p style="font-size:0.75rem; color:var(--muted); margin-top:0.65rem;">
+        Grey fields were not found in your CSV and were excluded from the report.
+        Including them improves outlier attribution and scanner-level breakdowns.
+      </p>
+      {% endif %}
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- ── Report Footer ── -->
+  <div class="report-footer">
+    <p>
+      Benchmarks: {{ benchmark_version }} national percentiles.<br>
+      Leapfrog Section 8B requires &ge;10 exams per category for pediatric scoring.<br>
+      This report is intended for use by qualified medical physics personnel.
+      {% if filename %} &bull; Source file: {{ filename }}{% endif %}
+    </p>
+    <div>
+      <div class="footer-logo">&#947; LeapfrogDose</div>
+      <div style="font-size:0.7rem; color:var(--muted); text-align:right; margin-top:0.2rem;">
+        GammaMetric &mdash; Daniel Soliman, MS, DABR(eligible)
+      </div>
+    </div>
+  </div>
+
+</main>
+</body>
+</html>
