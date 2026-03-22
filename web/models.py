@@ -5,12 +5,14 @@ Uses SQLite locally; set DATABASE_URL env var for PostgreSQL on Railway.
 
 import os
 import json
+import platform
 from datetime import datetime
 
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text, ForeignKey
 from sqlalchemy.orm import DeclarativeBase, sessionmaker, relationship
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:////tmp/leapfrogdose.db")
+_default_db = "sqlite:///./leapfrogdose.db" if platform.system() == "Windows" else "sqlite:////tmp/leapfrogdose.db"
+DATABASE_URL = os.getenv("DATABASE_URL", _default_db)
 
 # Railway gives postgres://, SQLAlchemy needs postgresql://
 if DATABASE_URL.startswith("postgres://"):
