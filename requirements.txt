@@ -4,3 +4,6 @@ python-multipart
 jinja2
 pandas
 numpy
+sqlalchemy
+passlib[bcrypt]
+itsdangerous
