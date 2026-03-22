@@ -1,5 +1,2 @@
-[build]
-installCmd = "pip install -r requirements-web.txt"
-
 [deploy]
 startCommand = "uvicorn web.app:app --host 0.0.0.0 --port $PORT"
