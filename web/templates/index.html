@@ -247,7 +247,17 @@
     <div class="logo-mark">&#947;</div>
     <div class="logo-text">LeapfrogDose <span>by GammaMetric</span></div>
   </a>
-  <nav>CT Dose Analytics &amp; Leapfrog Section 8B Reporting</nav>
+  <nav>
+    {% if user %}
+      <a href="/dashboard" style="color:#94a3b8;text-decoration:none;font-size:.82rem;">Dashboard</a>
+      &nbsp;&nbsp;
+      <a href="/logout" style="color:#94a3b8;text-decoration:none;font-size:.82rem;">Sign out</a>
+    {% else %}
+      <a href="/login" style="color:#94a3b8;text-decoration:none;font-size:.82rem;">Sign in</a>
+      &nbsp;&nbsp;
+      <a href="/signup" style="color:white;text-decoration:none;font-size:.82rem;background:#1a56b0;padding:.3rem .75rem;border-radius:6px;">Sign up free</a>
+    {% endif %}
+  </nav>
 </header>
 
 <div class="hero">

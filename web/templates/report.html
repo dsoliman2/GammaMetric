@@ -336,9 +336,26 @@
 </header>
 
 <div class="toolbar">
-  <a href="/">&#8592; New analysis</a>
+  {% if user %}
+    <a href="/dashboard">&#8592; Dashboard</a>
+  {% else %}
+    <a href="/">&#8592; New analysis</a>
+  {% endif %}
   <button class="btn-print" onclick="window.print()">&#128438; &nbsp;Save as PDF</button>
 </div>
+
+{% if not user %}
+<div style="background:#1a56b0;color:white;text-align:center;padding:.65rem 1rem;font-size:.82rem;">
+  <strong>Report not saved.</strong>
+  <a href="/signup" style="color:#bfdbfe;margin-left:.5rem;">Create a free account</a>
+  to save reports and track dose trends over time.
+</div>
+{% elif saved %}
+<div style="background:#166534;color:white;text-align:center;padding:.65rem 1rem;font-size:.82rem;">
+  &#10003; Report saved to your dashboard.
+  <a href="/dashboard" style="color:#bbf7d0;margin-left:.5rem;">View all reports →</a>
+</div>
+{% endif %}
 
 <main>
 

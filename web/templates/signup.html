@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LeapfrogDose — Create Account</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy:#0f2342; --blue:#1a56b0; --blue-lt:#e8f0fb;
+      --border:#e2e8f0; --bg:#f8fafc; --muted:#94a3b8; --slate:#475569;
+    }
+    body { font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+           background:var(--bg); color:#1e293b; min-height:100vh; display:flex; flex-direction:column; }
+    header { background:var(--navy); padding:0 2.5rem; height:60px;
+             display:flex; align-items:center; justify-content:space-between; }
+    .logo { display:flex; align-items:center; gap:.6rem; text-decoration:none; }
+    .logo-mark { width:32px; height:32px; background:var(--blue); border-radius:7px;
+                 display:flex; align-items:center; justify-content:center;
+                 font-size:.95rem; font-weight:800; color:white; }
+    .logo-text { color:white; font-size:1.05rem; font-weight:700; letter-spacing:-.02em; }
+    .logo-text span { color:var(--muted); font-weight:400; margin-left:.35rem; font-size:.8rem; }
+    header a.signin { font-size:.82rem; color:var(--muted); text-decoration:none; }
+    header a.signin:hover { color:white; }
+    main { flex:1; display:flex; align-items:center; justify-content:center; padding:3rem 1rem; }
+    .card { background:white; border-radius:14px; box-shadow:0 4px 24px rgba(0,0,0,.09);
+            padding:2.25rem 2rem; width:100%; max-width:420px; }
+    h2 { font-size:1.2rem; font-weight:700; margin-bottom:.25rem; }
+    .sub { font-size:.82rem; color:var(--slate); margin-bottom:1.5rem; }
+    .field { margin-bottom:1.1rem; }
+    label { display:block; font-size:.78rem; font-weight:600; text-transform:uppercase;
+            letter-spacing:.06em; color:var(--slate); margin-bottom:.35rem; }
+    input { width:100%; padding:.65rem .85rem; border:1.5px solid var(--border);
+            border-radius:8px; font-size:.95rem; outline:none;
+            transition:border-color .15s,box-shadow .15s; }
+    input:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(26,86,176,.12); }
+    .hint { font-size:.72rem; color:var(--muted); margin-top:.25rem; }
+    .error-box { background:#fee2e2; border:1px solid #fca5a5; border-radius:8px;
+                 padding:.75rem 1rem; font-size:.82rem; color:#991b1b; margin-bottom:1.1rem; }
+    .btn { width:100%; padding:.78rem; background:var(--blue); color:white; border:none;
+           border-radius:8px; font-size:.95rem; font-weight:600; cursor:pointer;
+           transition:background .15s; }
+    .btn:hover { background:#1648a0; }
+    .footer-link { text-align:center; margin-top:1.1rem; font-size:.82rem; color:var(--slate); }
+    .footer-link a { color:var(--blue); text-decoration:none; }
+    .footer-link a:hover { text-decoration:underline; }
+    footer { background:var(--navy); color:var(--muted); text-align:center;
+             padding:1.25rem; font-size:.78rem; }
+  </style>
+</head>
+<body>
+<header>
+  <a class="logo" href="/">
+    <div class="logo-mark">&#947;</div>
+    <div class="logo-text">LeapfrogDose <span>by GammaMetric</span></div>
+  </a>
+  <a class="signin" href="/login">Already have an account? Sign in →</a>
+</header>
+<main>
+  <div class="card">
+    <h2>Create your account</h2>
+    <p class="sub">Save reports and track dose trends over time.</p>
+
+    {% if error %}
+    <div class="error-box">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" action="/signup">
+      <div class="field">
+        <label for="facility_name">Facility Name</label>
+        <input type="text" id="facility_name" name="facility_name"
+               placeholder="e.g. Coastal Radiology Associates" autocomplete="organization">
+        <div class="hint">Used as the default name on your reports.</div>
+      </div>
+      <div class="field">
+        <label for="email">Email</label>
+        <input type="text" id="email" name="email" placeholder="you@facility.com"
+               autocomplete="email" required>
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password"
+               placeholder="At least 8 characters" autocomplete="new-password" required>
+      </div>
+      <button type="submit" class="btn">Create Account</button>
+    </form>
+    <div class="footer-link">
+      Already have an account? <a href="/login">Sign in</a>
+    </div>
+  </div>
+</main>
+<footer>&copy; 2026 GammaMetric &mdash; Daniel Soliman, MS, DABR(eligible)</footer>
+</body>
+</html>

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LeapfrogDose — Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy:#0f2342; --blue:#1a56b0; --blue-lt:#e8f0fb;
+      --border:#e2e8f0; --bg:#f8fafc; --muted:#94a3b8; --slate:#475569;
+      --green-bg:#dcfce7; --green-fg:#166534;
+      --yellow-bg:#fef3c7; --yellow-fg:#92400e;
+      --red-bg:#fee2e2; --red-fg:#991b1b;
+      --gray-bg:#f1f5f9; --gray-fg:#64748b;
+    }
+    body { font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+           background:var(--bg); color:#1e293b; min-height:100vh; display:flex; flex-direction:column; }
+
+    header { background:var(--navy); padding:0 2.5rem; height:60px;
+             display:flex; align-items:center; justify-content:space-between; }
+    .logo { display:flex; align-items:center; gap:.6rem; text-decoration:none; }
+    .logo-mark { width:32px; height:32px; background:var(--blue); border-radius:7px;
+                 display:flex; align-items:center; justify-content:center;
+                 font-size:.95rem; font-weight:800; color:white; }
+    .logo-text { color:white; font-size:1.05rem; font-weight:700; letter-spacing:-.02em; }
+    .logo-text span { color:var(--muted); font-weight:400; margin-left:.35rem; font-size:.8rem; }
+    .header-right { display:flex; align-items:center; gap:1.25rem; }
+    .header-right span { font-size:.82rem; color:var(--muted); }
+    .header-right a { font-size:.82rem; color:var(--muted); text-decoration:none; }
+    .header-right a:hover { color:white; }
+
+    main { flex:1; max-width:960px; margin:0 auto; padding:2rem 1.5rem 4rem; width:100%; }
+
+    .page-header { display:flex; align-items:center; justify-content:space-between;
+                   margin-bottom:1.75rem; }
+    .page-header h1 { font-size:1.3rem; font-weight:800; letter-spacing:-.02em; }
+    .page-header p { font-size:.82rem; color:var(--slate); margin-top:.2rem; }
+    .btn-new { padding:.6rem 1.2rem; background:var(--blue); color:white; border-radius:8px;
+               text-decoration:none; font-size:.85rem; font-weight:600;
+               display:flex; align-items:center; gap:.4rem; }
+    .btn-new:hover { background:#1648a0; }
+
+    /* ── Trend chart ── */
+    .trend-card { background:white; border-radius:12px; box-shadow:0 1px 8px rgba(0,0,0,.07);
+                  padding:1.5rem; margin-bottom:1.5rem; }
+    .trend-card h3 { font-size:.72rem; font-weight:700; text-transform:uppercase;
+                     letter-spacing:.08em; color:var(--muted); margin-bottom:1rem; }
+    .chart-wrap { position:relative; height:220px; }
+    .no-trend { font-size:.85rem; color:var(--muted); text-align:center; padding:2rem 0; }
+
+    /* ── Analysis list ── */
+    .section-heading { font-size:.72rem; font-weight:700; text-transform:uppercase;
+                       letter-spacing:.08em; color:var(--muted); margin-bottom:.65rem; padding-left:.25rem; }
+    .analysis-list { display:flex; flex-direction:column; gap:.75rem; }
+    .analysis-card { background:white; border-radius:12px; box-shadow:0 1px 8px rgba(0,0,0,.07);
+                     padding:1.1rem 1.4rem; display:flex; align-items:center;
+                     gap:1.25rem; text-decoration:none; color:inherit;
+                     transition:box-shadow .15s; }
+    .analysis-card:hover { box-shadow:0 3px 16px rgba(0,0,0,.1); }
+    .analysis-date { font-size:.75rem; color:var(--muted); white-space:nowrap; min-width:80px; }
+    .analysis-meta { flex:1; }
+    .analysis-facility { font-weight:700; font-size:.95rem; }
+    .analysis-sub { font-size:.75rem; color:var(--slate); margin-top:.15rem; }
+    .analysis-badges { display:flex; gap:.4rem; flex-wrap:wrap; margin-top:.4rem; }
+    .badge { padding:.15rem .55rem; border-radius:999px; font-size:.7rem; font-weight:600; }
+    .b-green  { background:var(--green-bg); color:var(--green-fg); }
+    .b-yellow { background:var(--yellow-bg); color:var(--yellow-fg); }
+    .b-red    { background:var(--red-bg); color:var(--red-fg); }
+    .b-gray   { background:var(--gray-bg); color:var(--gray-fg); }
+    .analysis-arrow { color:var(--muted); font-size:1.1rem; }
+
+    .empty-state { background:white; border-radius:12px; box-shadow:0 1px 8px rgba(0,0,0,.07);
+                   padding:3rem; text-align:center; }
+    .empty-state p { font-size:.875rem; color:var(--slate); margin-bottom:1.25rem; }
+    .empty-state a { padding:.6rem 1.2rem; background:var(--blue); color:white;
+                     border-radius:8px; text-decoration:none; font-size:.85rem; font-weight:600; }
+
+    footer { background:var(--navy); color:var(--muted); text-align:center;
+             padding:1.25rem; font-size:.78rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="/">
+    <div class="logo-mark">&#947;</div>
+    <div class="logo-text">LeapfrogDose <span>by GammaMetric</span></div>
+  </a>
+  <div class="header-right">
+    <span>{{ user.email }}</span>
+    <a href="/logout">Sign out</a>
+  </div>
+</header>
+
+<main>
+  <div class="page-header">
+    <div>
+      <h1>{{ user.facility_name or "Dashboard" }}</h1>
+      <p>Your dose analytics history</p>
+    </div>
+    <a class="btn-new" href="/">&#43; New Analysis</a>
+  </div>
+
+  <!-- ── Trend chart ── -->
+  {% if trend and analyses | length > 1 %}
+  <div class="trend-card">
+    <h3>P75 DLP Trend — Adult CT (mGy&middot;cm)</h3>
+    <div class="chart-wrap">
+      <canvas id="trendChart"></canvas>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ── Past analyses ── -->
+  <div class="section-heading">Past Analyses</div>
+
+  {% if analyses %}
+  <div class="analysis-list">
+    {% for a in analyses %}
+    {% set s = a.results.get("summary", {}) %}
+    {% set n_above = s.get("regions_above_benchmark", 0) %}
+    <a class="analysis-card" href="/report/{{ a.id }}">
+      <div class="analysis-date">
+        {{ a.analyzed_at.strftime("%b %d, %Y") }}
+      </div>
+      <div class="analysis-meta">
+        <div class="analysis-facility">{{ a.facility_name }}</div>
+        <div class="analysis-sub">
+          {{ s.get("total_adult_exams", 0) }} adult &bull;
+          {{ s.get("total_peds_exams", 0) }} pediatric &bull;
+          {{ s.get("regions_analyzed", 0) }} regions &bull;
+          {{ a.filename }}
+        </div>
+        <div class="analysis-badges">
+          {% if n_above == 0 %}
+            <span class="badge b-green">All within benchmark</span>
+          {% elif n_above == 1 %}
+            <span class="badge b-yellow">1 region above benchmark</span>
+          {% else %}
+            <span class="badge b-red">{{ n_above }} regions above benchmark</span>
+          {% endif %}
+          {% if s.get("total_outliers", 0) > 0 %}
+            <span class="badge b-yellow">{{ s.total_outliers }} outliers</span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="analysis-arrow">&#8250;</div>
+    </a>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <div class="empty-state">
+    <p>No analyses yet. Upload your first CSV to get started.</p>
+    <a href="/">Run Your First Analysis</a>
+  </div>
+  {% endif %}
+
+</main>
+
+<footer>&copy; 2026 GammaMetric &mdash; Daniel Soliman, MS, DABR(eligible)</footer>
+
+{% if trend and analyses | length > 1 %}
+<script>
+const trend = {{ trend | tojson }};
+const regions = Object.keys(trend);
+const colors = ["#1a56b0","#16a34a","#dc2626","#d97706","#7c3aed"];
+
+const allDates = [...new Set(
+  regions.flatMap(r => trend[r].map(p => p.date))
+)].sort();
+
+const datasets = regions.map((region, i) => ({
+  label: region,
+  data: allDates.map(d => {
+    const pt = trend[region].find(p => p.date === d);
+    return pt ? pt.p75 : null;
+  }),
+  borderColor: colors[i % colors.length],
+  backgroundColor: colors[i % colors.length] + "22",
+  tension: 0.3,
+  spanGaps: true,
+  pointRadius: 5,
+}));
+
+new Chart(document.getElementById("trendChart"), {
+  type: "line",
+  data: { labels: allDates, datasets },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 } } } },
+    scales: {
+      y: { title: { display: true, text: "P75 DLP (mGy·cm)", font: { size: 11 } } },
+      x: { grid: { display: false } },
+    },
+  },
+});
+</script>
+{% endif %}
+
+</body>
+</html>
