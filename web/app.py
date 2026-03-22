@@ -72,9 +72,8 @@ def _get_current_user(request: Request, db: Session) -> User | None:
 
 def _error(request, title, message, suggestions=None, status=422):
     return templates.TemplateResponse(
-        "error.html",
-        {"request": request, "title": title,
-         "message": message, "suggestions": suggestions or []},
+        request, "error.html",
+        {"title": title, "message": message, "suggestions": suggestions or []},
         status_code=status,
     )
 
@@ -100,8 +99,8 @@ def _send_report_email(to_address: str, facility_name: str, html: str):
 async def index(request: Request, db: Session = Depends(get_db)):
     user = _get_current_user(request, db)
     return templates.TemplateResponse(
-        "index.html",
-        {"request": request, "email_enabled": EMAIL_ENABLED, "user": user},
+        request, "index.html",
+        {"email_enabled": EMAIL_ENABLED, "user": user},
     )
 
 
@@ -109,7 +108,7 @@ async def index(request: Request, db: Session = Depends(get_db)):
 async def signup_get(request: Request, db: Session = Depends(get_db)):
     if _get_current_user(request, db):
         return RedirectResponse("/dashboard", status_code=302)
-    return templates.TemplateResponse("signup.html", {"request": request, "error": None})
+    return templates.TemplateResponse(request, "signup.html", {"error": None})
 
 
 @app.post("/signup", response_class=HTMLResponse)
@@ -123,13 +122,13 @@ async def signup_post(
     email = email.strip().lower()
     if db.query(User).filter(User.email == email).first():
         return templates.TemplateResponse(
-            "signup.html",
-            {"request": request, "error": "An account with that email already exists."},
+            request, "signup.html",
+            {"error": "An account with that email already exists."},
         )
     if len(password) < 8:
         return templates.TemplateResponse(
-            "signup.html",
-            {"request": request, "error": "Password must be at least 8 characters."},
+            request, "signup.html",
+            {"error": "Password must be at least 8 characters."},
         )
     user = User(email=email, password_hash=hash_password(password),
                 facility_name=facility_name.strip())
@@ -143,7 +142,7 @@ async def signup_post(
 async def login_get(request: Request, db: Session = Depends(get_db)):
     if _get_current_user(request, db):
         return RedirectResponse("/dashboard", status_code=302)
-    return templates.TemplateResponse("login.html", {"request": request, "error": None})
+    return templates.TemplateResponse(request, "login.html", {"error": None})
 
 
 @app.post("/login", response_class=HTMLResponse)
@@ -157,8 +156,8 @@ async def login_post(
     user = db.query(User).filter(User.email == email).first()
     if not user or not verify_password(password, user.password_hash):
         return templates.TemplateResponse(
-            "login.html",
-            {"request": request, "error": "Incorrect email or password."},
+            request, "login.html",
+            {"error": "Incorrect email or password."},
         )
     response = RedirectResponse("/dashboard", status_code=302)
     set_session(response, user.id)
@@ -192,8 +191,7 @@ async def dashboard(request: Request, db: Session = Depends(get_db)):
                 "status": data["benchmark_comparison"]["status"],
             })
 
-    return templates.TemplateResponse("dashboard.html", {
-        "request":  request,
+    return templates.TemplateResponse(request, "dashboard.html", {
         "user":     user,
         "analyses": analyses,
         "trend":    trend,
@@ -212,8 +210,7 @@ async def view_report(analysis_id: int, request: Request, db: Session = Depends(
     if not analysis:
         return _error(request, "Report not found",
                       "This report doesn't exist or doesn't belong to your account.", status=404)
-    return templates.TemplateResponse("report.html", {
-        "request":           request,
+    return templates.TemplateResponse(request, "report.html", {
         "results":           analysis.results,
         "col_info":          {"found": [], "critical_missing": [], "optional_missing": [],
                               "region_ok": True, "dlp_ok": True, "age_ok": True},
@@ -301,7 +298,6 @@ async def analyze(
         saved_id = record.id
 
     ctx = {
-        "request":           request,
         "results":           results,
         "col_info":          col_info,
         "benchmark_version": BENCHMARK_VERSION,
@@ -312,7 +308,7 @@ async def analyze(
         "saved_id":          saved_id,
     }
 
-    report_html = templates.TemplateResponse("report.html", ctx)
+    report_html = templates.TemplateResponse(request, "report.html", ctx)
 
     if email.strip() and EMAIL_ENABLED:
         try:
