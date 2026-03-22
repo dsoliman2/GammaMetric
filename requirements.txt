@@ -5,6 +5,7 @@ jinja2
 pandas
 numpy
 sqlalchemy
+psycopg2-binary
 passlib[bcrypt]
 bcrypt==4.0.1
 itsdangerous
