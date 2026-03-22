@@ -10,7 +10,7 @@ from datetime import datetime
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text, ForeignKey
 from sqlalchemy.orm import DeclarativeBase, sessionmaker, relationship
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./leapfrogdose.db")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:////tmp/leapfrogdose.db")
 
 # Railway gives postgres://, SQLAlchemy needs postgresql://
 if DATABASE_URL.startswith("postgres://"):
