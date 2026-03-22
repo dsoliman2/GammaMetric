@@ -561,10 +561,15 @@
   <!-- ── Report Footer ── -->
   <div class="report-footer">
     <p>
-      Benchmarks: {{ benchmark_version }} national percentiles.<br>
-      Leapfrog Section 8B requires &ge;10 exams per category for pediatric scoring.<br>
-      This report is intended for use by qualified medical physics personnel.
-      {% if filename %} &bull; Source file: {{ filename }}{% endif %}
+      Benchmarks: {{ benchmark_version }} national percentiles.
+      Leapfrog Section 8B requires &ge;10 exams per category for pediatric scoring.{% if filename %} &bull; Source file: {{ filename }}{% endif %}<br>
+      <strong style="color:#92400e;">Disclaimer:</strong>
+      This report is a survey preparation aid for use by qualified medical physics personnel only.
+      It does not constitute medical advice, clinical guidance, or a regulated medical device output.
+      Results must be reviewed and approved by a licensed medical physicist before submission.
+      This tool is not intended to process protected health information (PHI); users are solely
+      responsible for ensuring uploaded data is de-identified prior to use.
+      GammaMetric and Daniel Soliman assume no liability for decisions made based on this report.
     </p>
     <div>
       <div class="footer-logo">&#947; LeapfrogDose</div>
