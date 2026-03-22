@@ -82,6 +82,33 @@ LIDC-IDRI cases used in preprint: LIDC-0009, LIDC-IDRI-0001, 0002, 0087, 0089,
 - NIfTI files follow LIDC-IDRI naming conventions
 - Leapfrog reports use routine-only exam subsets per Section 8B spec
 
+## LeapfrogDose Web App — Deployment Notes
+
+**Live at:** dose.gammametric.com (Railway, custom domain via Namecheap DNS)
+**Start command** (railway.toml): `uvicorn web.app:app --host 0.0.0.0 --port $PORT`
+**Dependencies:** Railway installs `requirements.txt` — keep web deps there. ML deps are in `requirements-ml.txt` (not installed on Railway).
+
+**Key files:**
+- `web/app.py` — FastAPI app, all routes
+- `web/models.py` — SQLAlchemy models (User, AnalysisResult)
+- `web/auth.py` — bcrypt password hashing, itsdangerous signed session cookies
+- `web/templates/` — Jinja2 templates (index, report, dashboard, login, signup, error)
+
+**Known gotchas (already fixed, do not revert):**
+
+1. **Starlette TemplateResponse API** — newer Starlette requires `(request, name, context)`, not `(name, {"request": request, ...})`. The `request` object is passed as the first positional arg and must NOT be included in the context dict.
+
+2. **bcrypt pinned to 4.0.1** — `passlib[bcrypt]` is incompatible with bcrypt 4.x on Python 3.13. Pin `bcrypt==4.0.1` in requirements.txt.
+
+3. **SQLite path is platform-aware** — `/tmp/leapfrogdose.db` on Linux/Railway, `./leapfrogdose.db` on Windows. Set via `platform.system()` in `web/models.py`. On Railway, set `DATABASE_URL` to a PostgreSQL URL for persistent storage (SQLite in /tmp is ephemeral).
+
+4. **Railway uses Railpack** (not Nixpacks) — ignores `nixpacks.toml` and `Procfile`. Use `railway.toml` with `[deploy] startCommand`.
+
+**Environment variables needed on Railway:**
+- `SECRET_KEY` — random string for session signing (default is insecure dev value)
+- `DATABASE_URL` — PostgreSQL URL for persistent DB (optional; defaults to SQLite /tmp)
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` — email delivery (optional)
+
 ## Current Priorities
 1. Preprint submitted to arXiv — monitor for feedback, prepare for journal submission
 2. GammaMetric business development — RAI (Daytona Beach) top prospect
