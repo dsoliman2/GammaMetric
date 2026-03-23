@@ -18,8 +18,9 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
 
+import pandas as pd
 from fastapi import FastAPI, File, UploadFile, Form, Request, Depends
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
@@ -220,6 +221,73 @@ async def view_report(analysis_id: int, request: Request, db: Session = Depends(
         "user":              user,
         "saved":             True,
     })
+
+
+# ── Excel Export ─────────────────────────────────────────────────────────────
+
+def _results_to_excel(results: dict) -> io.BytesIO:
+    buf = io.BytesIO()
+    with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+        # Adult sheet
+        adult_rows = []
+        for region, data in results.get("adult", {}).items():
+            s = data["stats"]
+            b = data["benchmark_comparison"]
+            adult_rows.append({
+                "Region": region,
+                "N": s.get("count"),
+                "P25 (mGy·cm)": s.get("p25"),
+                "Median P50 (mGy·cm)": s.get("p50"),
+                "P75 (mGy·cm)": s.get("p75"),
+                "DIR Benchmark P75": b.get("benchmark_p75"),
+                "Status": b.get("status"),
+            })
+        if adult_rows:
+            pd.DataFrame(adult_rows).to_excel(writer, sheet_name="Adult CT", index=False)
+
+        # Pediatric sheet
+        peds_rows = []
+        for region, age_groups in results.get("pediatric", {}).items():
+            for age_grp, data in age_groups.items():
+                s = data.get("stats", {})
+                peds_rows.append({
+                    "Region": region,
+                    "Age Group": age_grp,
+                    "N": s.get("count"),
+                    "Median P50 (mGy·cm)": s.get("p50"),
+                    "Min N Met": data.get("min_n_met", ""),
+                })
+        if peds_rows:
+            pd.DataFrame(peds_rows).to_excel(writer, sheet_name="Pediatric CT", index=False)
+
+        # Outliers sheet
+        outliers = results.get("outliers", [])
+        if outliers:
+            pd.DataFrame(outliers).to_excel(writer, sheet_name="Outliers", index=False)
+
+    buf.seek(0)
+    return buf
+
+
+@app.get("/export/{analysis_id}")
+async def export_excel(analysis_id: int, request: Request, db: Session = Depends(get_db)):
+    user = _get_current_user(request, db)
+    if not user:
+        return RedirectResponse("/login", status_code=302)
+    analysis = db.query(AnalysisResult).filter(
+        AnalysisResult.id == analysis_id,
+        AnalysisResult.user_id == user.id,
+    ).first()
+    if not analysis:
+        return _error(request, "Report not found", "This report doesn't exist or doesn't belong to your account.", status=404)
+
+    buf = _results_to_excel(analysis.results)
+    fname = (analysis.facility_name or "report").replace(" ", "_")
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={fname}_dose_report.xlsx"},
+    )
 
 
 # ── Analyze ──────────────────────────────────────────────────────────────────

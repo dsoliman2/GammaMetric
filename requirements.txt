@@ -6,6 +6,7 @@ pandas
 numpy
 sqlalchemy
 psycopg2-binary
+openpyxl
 passlib[bcrypt]
 bcrypt==4.0.1
 itsdangerous
