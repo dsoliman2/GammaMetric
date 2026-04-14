@@ -11,7 +11,6 @@ import os
 import sys
 import json
 import logging
-import smtplib
 import asyncio
 import tempfile
 import contextlib
@@ -19,10 +18,9 @@ import io
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("leapfrogdose")
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 from pathlib import Path
 
+import resend
 import pandas as pd
 from fastapi import FastAPI, File, UploadFile, Form, Request, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
@@ -36,12 +34,11 @@ from web.auth import (hash_password, verify_password, set_session, clear_session
                       get_user_id, make_reset_token, verify_reset_token)
 
 # ── Email config ────────────────────────────────────────────────────────────
-SMTP_HOST    = os.getenv("SMTP_HOST", "")
-SMTP_PORT    = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USER    = os.getenv("SMTP_USER", "")
-SMTP_PASS    = os.getenv("SMTP_PASS", "")
-EMAIL_FROM   = os.getenv("EMAIL_FROM", SMTP_USER)
-EMAIL_ENABLED = bool(SMTP_HOST and SMTP_USER and SMTP_PASS)
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", os.getenv("SMTP_PASS", ""))
+EMAIL_FROM     = os.getenv("EMAIL_FROM", "onboarding@resend.dev")
+EMAIL_ENABLED  = bool(RESEND_API_KEY)
+if RESEND_API_KEY:
+    resend.api_key = RESEND_API_KEY
 
 # ── App setup ───────────────────────────────────────────────────────────────
 app = FastAPI(title="LeapfrogDose", docs_url=None, redoc_url=None)
@@ -85,28 +82,23 @@ def _error(request, title, message, suggestions=None, status=422):
     )
 
 
-def _smtp_send(msg_string: str, to_address: str):
-    if SMTP_PORT == 465:
-        with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=10) as s:
-            s.login(SMTP_USER, SMTP_PASS)
-            s.sendmail(EMAIL_FROM, to_address, msg_string)
-    else:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10) as s:
-            s.ehlo(); s.starttls(); s.login(SMTP_USER, SMTP_PASS)
-            s.sendmail(EMAIL_FROM, to_address, msg_string)
+def _send_email(to_address: str, subject: str, html: str, text: str):
+    resend.Emails.send({
+        "from": f"LeapfrogDose <{EMAIL_FROM}>",
+        "to": [to_address],
+        "subject": subject,
+        "html": html,
+        "text": text,
+    })
 
 
 def _send_report_email(to_address: str, facility_name: str, html: str):
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"LeapfrogDose Report — {facility_name}"
-    msg["From"]    = f"LeapfrogDose <{EMAIL_FROM}>"
-    msg["To"]      = to_address
-    msg.attach(MIMEText(
-        f"Your Leapfrog Section 8B dose report for {facility_name} is attached.\n\n"
-        "— LeapfrogDose by GammaMetric", "plain"
-    ))
-    msg.attach(MIMEText(html, "html"))
-    _smtp_send(msg.as_string(), to_address)
+    _send_email(
+        to_address,
+        subject=f"LeapfrogDose Report — {facility_name}",
+        html=html,
+        text=f"Your dose report for {facility_name} is ready.\n\n— LeapfrogDose by GammaMetric",
+    )
 
 
 # ── Public routes ────────────────────────────────────────────────────────────
@@ -204,27 +196,21 @@ async def forgot_password_post(
     if user and EMAIL_ENABLED:
         token = make_reset_token(email)
         reset_url = str(request.base_url).rstrip("/") + f"/reset-password?token={token}"
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = "LeapfrogDose — Password Reset"
-        msg["From"]    = f"LeapfrogDose <{EMAIL_FROM}>"
-        msg["To"]      = email
-        msg.attach(MIMEText(
-            f"Click the link below to reset your password. The link expires in 1 hour.\n\n{reset_url}\n\n"
-            "If you did not request this, you can ignore this email.\n\n— LeapfrogDose by GammaMetric",
-            "plain"
-        ))
-        msg.attach(MIMEText(
-            f'<p>Click the link below to reset your password. The link expires in 1 hour.</p>'
-            f'<p><a href="{reset_url}">{reset_url}</a></p>'
-            f'<p>If you did not request this, you can ignore this email.</p>'
-            f'<p>— LeapfrogDose by GammaMetric</p>',
-            "html"
-        ))
         try:
-            await asyncio.to_thread(_smtp_send, msg.as_string(), email)
+            reset_html = (
+                f'<p>Click the link below to reset your password. The link expires in 1 hour.</p>'
+                f'<p><a href="{reset_url}">{reset_url}</a></p>'
+                f'<p>If you did not request this, ignore this email.</p>'
+                f'<p>— LeapfrogDose by GammaMetric</p>'
+            )
+            reset_text = (
+                f"Reset your password here (expires in 1 hour):\n\n{reset_url}\n\n"
+                "If you did not request this, ignore this email.\n\n— LeapfrogDose by GammaMetric"
+            )
+            await asyncio.to_thread(_send_email, email, "LeapfrogDose — Password Reset", reset_html, reset_text)
             logger.info("forgot-password: email sent to %s", email)
         except Exception as exc:
-            logger.error("forgot-password: SMTP error: %s", exc)
+            logger.error("forgot-password: Resend error: %s", exc)
     # Always show the same message to avoid email enumeration
     return templates.TemplateResponse(request, "forgot_password.html", {"sent": True, "error": None})
 
