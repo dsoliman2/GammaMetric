@@ -274,11 +274,14 @@
       <input type="text" id="facility_name" name="facility_name"
              placeholder="e.g. Coastal Radiology Associates" autocomplete="organization">
 
-      <label class="form-label">Dose Data CSV</label>
+      <label class="form-label" style="display:flex;justify-content:space-between;align-items:center;">
+        Dose Data CSV
+        <a href="/template" style="font-size:.72rem;font-weight:400;text-transform:none;letter-spacing:0;color:var(--blue);text-decoration:none;">&#8595; Download template</a>
+      </label>
       <div class="drop-zone" id="drop-zone">
         <div class="dz-icon">&#128196;</div>
         <p><strong>Click to browse</strong> or drag &amp; drop your file</p>
-        <p class="dz-hint">Radimetrics CSV export &bull; UTF-8, Latin-1, or CP1252</p>
+        <p class="dz-hint">Radimetrics export or template CSV &bull; UTF-8, Latin-1, or CP1252</p>
         <div class="dz-filename" id="file-name"></div>
         <input type="file" id="file-input" name="file" accept=".csv" required>
       </div>

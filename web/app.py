@@ -20,6 +20,18 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("leapfrogdose")
 from pathlib import Path
 
+
+class _NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super().default(obj)
+
+import numpy as np
 import resend
 import pandas as pd
 from fastapi import FastAPI, File, UploadFile, Form, Request, Depends
@@ -180,6 +192,16 @@ async def index(request: Request, db: Session = Depends(get_db)):
     return templates.TemplateResponse(
         request, "index.html",
         {"email_enabled": EMAIL_ENABLED, "user": user},
+    )
+
+
+@app.get("/template")
+async def download_template():
+    template_path = Path(__file__).parent / "dose_template.csv"
+    return StreamingResponse(
+        open(template_path, "rb"),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=dose_template.csv"},
     )
 
 
@@ -523,7 +545,7 @@ async def analyze(
             user_id=user.id,
             facility_name=fname,
             filename=file.filename,
-            results_json=json.dumps(results),
+            results_json=json.dumps(results, cls=_NumpyEncoder),
         )
         db.add(record); db.commit(); db.refresh(record)
         saved_id = record.id

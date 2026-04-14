@@ -208,7 +208,7 @@ def load_radimetrics_csv(filepath: str) -> pd.DataFrame:
         for sep in [',', '\t', ';']:
             try:
                 df = pd.read_csv(filepath, encoding=encoding, sep=sep)
-                if len(df.columns) > 3:  # Reasonable number of columns
+                if len(df.columns) >= 2:  # At minimum need DLP + description
                     break
             except Exception:
                 continue

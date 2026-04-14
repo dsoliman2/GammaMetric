@@ -1,0 +1,8 @@
+study_description,dlp,age,exam_date,scanner
+CT Head,920,58,2024-01-05,Scanner1
+CT Head,880,43,2024-01-08,Scanner1
+CT Chest,340,62,2024-01-05,Scanner1
+CT Chest,310,55,2024-01-08,Scanner1
+CT Abdomen Pelvis,580,67,2024-01-05,Scanner1
+CT Abdomen Pelvis,540,50,2024-01-08,Scanner1
+CT Spine,520,45,2024-01-05,Scanner1

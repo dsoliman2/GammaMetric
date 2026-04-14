@@ -1,0 +1,36 @@
+study_description,dlp,age,scanner,exam_date
+CT Head,860,55,Scanner1,2024-04-05
+CT Head,910,62,Scanner1,2024-04-08
+CT Head,890,48,Scanner1,2024-04-12
+CT Head,930,71,Scanner1,2024-04-15
+CT Head,820,55,Scanner1,2024-04-19
+CT Head,880,43,Scanner1,2024-04-22
+CT Head,950,58,Scanner1,2024-04-26
+CT Head,870,67,Scanner1,2024-04-29
+CT Head,900,52,Scanner1,2024-05-02
+CT Head,840,60,Scanner1,2024-05-05
+CT Chest,480,55,Scanner1,2024-04-05
+CT Chest,530,62,Scanner1,2024-04-08
+CT Chest,510,48,Scanner1,2024-04-12
+CT Chest,560,71,Scanner1,2024-04-15
+CT Chest,490,55,Scanner1,2024-04-19
+CT Chest,540,43,Scanner1,2024-04-22
+CT Chest,570,58,Scanner1,2024-04-26
+CT Chest,520,67,Scanner1,2024-04-29
+CT Chest,500,52,Scanner1,2024-05-02
+CT Chest,550,60,Scanner1,2024-05-05
+CT Abdomen Pelvis,870,55,Scanner1,2024-04-05
+CT Abdomen Pelvis,940,62,Scanner1,2024-04-08
+CT Abdomen Pelvis,850,48,Scanner1,2024-04-12
+CT Abdomen Pelvis,920,71,Scanner1,2024-04-15
+CT Abdomen Pelvis,960,55,Scanner1,2024-04-19
+CT Abdomen Pelvis,830,43,Scanner1,2024-04-22
+CT Abdomen Pelvis,980,58,Scanner1,2024-04-26
+CT Abdomen Pelvis,890,67,Scanner1,2024-04-29
+CT Abdomen Pelvis,910,52,Scanner1,2024-05-02
+CT Abdomen Pelvis,950,60,Scanner1,2024-05-05
+CT Spine,510,55,Scanner1,2024-04-05
+CT Spine,560,62,Scanner1,2024-04-08
+CT Spine,490,48,Scanner1,2024-04-12
+CT Spine,540,71,Scanner1,2024-04-15
+CT Spine,520,55,Scanner1,2024-04-19
