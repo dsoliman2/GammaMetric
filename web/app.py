@@ -86,9 +86,14 @@ def _error(request, title, message, suggestions=None, status=422):
 
 
 def _smtp_send(msg_string: str, to_address: str):
-    with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10) as s:
-        s.ehlo(); s.starttls(); s.login(SMTP_USER, SMTP_PASS)
-        s.sendmail(EMAIL_FROM, to_address, msg_string)
+    if SMTP_PORT == 465:
+        with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=10) as s:
+            s.login(SMTP_USER, SMTP_PASS)
+            s.sendmail(EMAIL_FROM, to_address, msg_string)
+    else:
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10) as s:
+            s.ehlo(); s.starttls(); s.login(SMTP_USER, SMTP_PASS)
+            s.sendmail(EMAIL_FROM, to_address, msg_string)
 
 
 def _send_report_email(to_address: str, facility_name: str, html: str):
