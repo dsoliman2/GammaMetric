@@ -12,12 +12,13 @@ import sys
 import json
 import logging
 import smtplib
+import asyncio
 import tempfile
 import contextlib
+import io
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("leapfrogdose")
-import io
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
@@ -84,6 +85,12 @@ def _error(request, title, message, suggestions=None, status=422):
     )
 
 
+def _smtp_send(msg_string: str, to_address: str):
+    with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10) as s:
+        s.ehlo(); s.starttls(); s.login(SMTP_USER, SMTP_PASS)
+        s.sendmail(EMAIL_FROM, to_address, msg_string)
+
+
 def _send_report_email(to_address: str, facility_name: str, html: str):
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f"LeapfrogDose Report — {facility_name}"
@@ -94,9 +101,7 @@ def _send_report_email(to_address: str, facility_name: str, html: str):
         "— LeapfrogDose by GammaMetric", "plain"
     ))
     msg.attach(MIMEText(html, "html"))
-    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as s:
-        s.ehlo(); s.starttls(); s.login(SMTP_USER, SMTP_PASS)
-        s.sendmail(EMAIL_FROM, to_address, msg.as_string())
+    _smtp_send(msg.as_string(), to_address)
 
 
 # ── Public routes ────────────────────────────────────────────────────────────
@@ -211,9 +216,7 @@ async def forgot_password_post(
             "html"
         ))
         try:
-            with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as s:
-                s.ehlo(); s.starttls(); s.login(SMTP_USER, SMTP_PASS)
-                s.sendmail(EMAIL_FROM, email, msg.as_string())
+            await asyncio.to_thread(_smtp_send, msg.as_string(), email)
             logger.info("forgot-password: email sent to %s", email)
         except Exception as exc:
             logger.error("forgot-password: SMTP error: %s", exc)
