@@ -9,6 +9,7 @@ from passlib.context import CryptContext
 
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-change-in-production")
 SESSION_MAX_AGE = 60 * 60 * 24 * 30  # 30 days
+RESET_MAX_AGE   = 60 * 60             # 1 hour
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 _serializer = URLSafeTimedSerializer(SECRET_KEY)
@@ -35,6 +36,17 @@ def set_session(response: Response, user_id: int):
 
 def clear_session(response: Response):
     response.delete_cookie("session")
+
+
+def make_reset_token(email: str) -> str:
+    return _serializer.dumps(email.lower(), salt="password-reset")
+
+
+def verify_reset_token(token: str) -> str | None:
+    try:
+        return _serializer.loads(token, salt="password-reset", max_age=RESET_MAX_AGE)
+    except (BadSignature, SignatureExpired):
+        return None
 
 
 def get_user_id(request: Request) -> int | None:

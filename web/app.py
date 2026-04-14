@@ -27,7 +27,8 @@ from sqlalchemy.orm import Session
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from core.leapfrog_dose import load_radimetrics_csv, analyze_facility, COLUMN_MAPPINGS, BENCHMARK_VERSION
 from web.models import init_db, get_db, User, AnalysisResult
-from web.auth import hash_password, verify_password, set_session, clear_session, get_user_id
+from web.auth import (hash_password, verify_password, set_session, clear_session,
+                      get_user_id, make_reset_token, verify_reset_token)
 
 # ── Email config ────────────────────────────────────────────────────────────
 SMTP_HOST    = os.getenv("SMTP_HOST", "")
@@ -170,6 +171,94 @@ async def logout(request: Request):
     response = RedirectResponse("/", status_code=302)
     clear_session(response)
     return response
+
+
+@app.get("/forgot-password", response_class=HTMLResponse)
+async def forgot_password_get(request: Request):
+    return templates.TemplateResponse(request, "forgot_password.html", {"sent": False, "error": None})
+
+
+@app.post("/forgot-password", response_class=HTMLResponse)
+async def forgot_password_post(
+    request: Request,
+    email: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    email = email.strip().lower()
+    user = db.query(User).filter(User.email == email).first()
+    if user and EMAIL_ENABLED:
+        token = make_reset_token(email)
+        reset_url = str(request.base_url).rstrip("/") + f"/reset-password?token={token}"
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = "LeapfrogDose — Password Reset"
+        msg["From"]    = f"LeapfrogDose <{EMAIL_FROM}>"
+        msg["To"]      = email
+        msg.attach(MIMEText(
+            f"Click the link below to reset your password. The link expires in 1 hour.\n\n{reset_url}\n\n"
+            "If you did not request this, you can ignore this email.\n\n— LeapfrogDose by GammaMetric",
+            "plain"
+        ))
+        msg.attach(MIMEText(
+            f'<p>Click the link below to reset your password. The link expires in 1 hour.</p>'
+            f'<p><a href="{reset_url}">{reset_url}</a></p>'
+            f'<p>If you did not request this, you can ignore this email.</p>'
+            f'<p>— LeapfrogDose by GammaMetric</p>',
+            "html"
+        ))
+        try:
+            with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as s:
+                s.ehlo(); s.starttls(); s.login(SMTP_USER, SMTP_PASS)
+                s.sendmail(EMAIL_FROM, email, msg.as_string())
+        except Exception:
+            pass
+    # Always show the same message to avoid email enumeration
+    return templates.TemplateResponse(request, "forgot_password.html", {"sent": True, "error": None})
+
+
+@app.get("/reset-password", response_class=HTMLResponse)
+async def reset_password_get(request: Request, token: str = ""):
+    email = verify_reset_token(token)
+    if not email:
+        return templates.TemplateResponse(
+            request, "reset_password.html",
+            {"token": token, "invalid": True, "error": None, "success": False},
+        )
+    return templates.TemplateResponse(
+        request, "reset_password.html",
+        {"token": token, "invalid": False, "error": None, "success": False},
+    )
+
+
+@app.post("/reset-password", response_class=HTMLResponse)
+async def reset_password_post(
+    request: Request,
+    token: str = Form(...),
+    password: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    email = verify_reset_token(token)
+    if not email:
+        return templates.TemplateResponse(
+            request, "reset_password.html",
+            {"token": token, "invalid": True, "error": None, "success": False},
+        )
+    if len(password) < 8:
+        return templates.TemplateResponse(
+            request, "reset_password.html",
+            {"token": token, "invalid": False, "error": "Password must be at least 8 characters.", "success": False},
+        )
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        return templates.TemplateResponse(
+            request, "reset_password.html",
+            {"token": token, "invalid": True, "error": None, "success": False},
+        )
+    user.password_hash = hash_password(password)
+    db.commit()
+    return templates.TemplateResponse(
+        request, "reset_password.html",
+        {"token": token, "invalid": False, "error": None, "success": True},
+    )
 
 
 @app.get("/dashboard", response_class=HTMLResponse)
