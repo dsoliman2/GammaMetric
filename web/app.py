@@ -101,6 +101,77 @@ def _send_report_email(to_address: str, facility_name: str, html: str):
     )
 
 
+def _check_drift(old_results: dict, new_results: dict) -> list[dict]:
+    """Compare two analysis results dicts. Return list of drifted regions."""
+    drifts = []
+    old_adult = old_results.get("adult", {})
+    new_adult = new_results.get("adult", {})
+    for region, new_data in new_adult.items():
+        new_status = new_data["benchmark_comparison"]["status"]
+        new_p75    = new_data["stats"].get("p75", 0)
+        old_data   = old_adult.get(region)
+        if old_data is None:
+            continue
+        old_status = old_data["benchmark_comparison"]["status"]
+        old_p75    = old_data["stats"].get("p75", 0)
+
+        newly_above = (old_status != "ABOVE BENCHMARK" and new_status == "ABOVE BENCHMARK")
+        worsened    = (old_status == "ABOVE BENCHMARK" and new_status == "ABOVE BENCHMARK"
+                       and old_p75 > 0 and (new_p75 - old_p75) / old_p75 >= 0.15)
+        if newly_above or worsened:
+            drifts.append({
+                "region":     region,
+                "old_status": old_status,
+                "new_status": new_status,
+                "old_p75":    old_p75,
+                "new_p75":    new_p75,
+                "newly_above": newly_above,
+            })
+    return drifts
+
+
+def _send_drift_alert(to_address: str, facility_name: str, drifts: list[dict]):
+    rows_html = ""
+    rows_text = ""
+    for d in drifts:
+        change = f"{d['old_p75']:.0f} → {d['new_p75']:.0f} mGy·cm"
+        flag   = "NEW ▲" if d["newly_above"] else "WORSE ▲"
+        rows_html += (
+            f"<tr><td style='padding:6px 12px;border-bottom:1px solid #e2e8f0'><b>{d['region']}</b></td>"
+            f"<td style='padding:6px 12px;border-bottom:1px solid #e2e8f0'>{change}</td>"
+            f"<td style='padding:6px 12px;border-bottom:1px solid #e2e8f0;color:#dc2626'>{flag}</td></tr>"
+        )
+        rows_text += f"  {d['region']}: {change} [{flag}]\n"
+
+    html = f"""
+<div style="font-family:sans-serif;max-width:560px;margin:0 auto">
+  <h2 style="color:#0f2342">Dose drift detected — {facility_name}</h2>
+  <p style="color:#475569">One or more CT dose regions have crossed above the ACR DIR 75th percentile
+  benchmark since your last upload.</p>
+  <table style="width:100%;border-collapse:collapse;margin:1.5rem 0;font-size:14px">
+    <thead>
+      <tr style="background:#f1f5f9">
+        <th style="padding:8px 12px;text-align:left">Region</th>
+        <th style="padding:8px 12px;text-align:left">P75 Change</th>
+        <th style="padding:8px 12px;text-align:left">Flag</th>
+      </tr>
+    </thead>
+    <tbody>{rows_html}</tbody>
+  </table>
+  <p style="color:#475569">Log in to LeapfrogDose to review your full report and protocol recommendations.</p>
+  <p style="color:#94a3b8;font-size:12px">— LeapfrogDose by GammaMetric</p>
+</div>"""
+
+    text = (
+        f"Dose drift detected — {facility_name}\n\n"
+        f"The following regions have crossed above the ACR DIR benchmark:\n\n"
+        f"{rows_text}\n"
+        "Log in to LeapfrogDose to review your full report.\n\n"
+        "— LeapfrogDose by GammaMetric"
+    )
+    _send_email(to_address, f"⚠ Dose drift detected — {facility_name}", html, text)
+
+
 # ── Public routes ────────────────────────────────────────────────────────────
 
 @app.get("/", response_class=HTMLResponse)
@@ -445,6 +516,9 @@ async def analyze(
     # Save if logged in
     saved_id = None
     if user:
+        # Grab previous analysis before saving the new one
+        prev_analysis = user.analyses[0] if user.analyses else None
+
         record = AnalysisResult(
             user_id=user.id,
             facility_name=fname,
@@ -453,6 +527,15 @@ async def analyze(
         )
         db.add(record); db.commit(); db.refresh(record)
         saved_id = record.id
+
+        # Drift alert — compare to previous upload
+        if prev_analysis and EMAIL_ENABLED:
+            drifts = _check_drift(prev_analysis.results, results)
+            if drifts:
+                asyncio.create_task(
+                    asyncio.to_thread(_send_drift_alert, user.email, fname, drifts)
+                )
+                logger.info("drift-alert: %d region(s) drifted for %s", len(drifts), user.email)
 
     ctx = {
         "results":           results,
