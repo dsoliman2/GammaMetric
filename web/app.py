@@ -10,9 +10,13 @@ Email delivery: set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS env vars to enabl
 import os
 import sys
 import json
+import logging
 import smtplib
 import tempfile
 import contextlib
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("leapfrogdose")
 import io
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -186,6 +190,7 @@ async def forgot_password_post(
 ):
     email = email.strip().lower()
     user = db.query(User).filter(User.email == email).first()
+    logger.info("forgot-password: email=%s user_found=%s email_enabled=%s", email, bool(user), EMAIL_ENABLED)
     if user and EMAIL_ENABLED:
         token = make_reset_token(email)
         reset_url = str(request.base_url).rstrip("/") + f"/reset-password?token={token}"
@@ -209,8 +214,9 @@ async def forgot_password_post(
             with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as s:
                 s.ehlo(); s.starttls(); s.login(SMTP_USER, SMTP_PASS)
                 s.sendmail(EMAIL_FROM, email, msg.as_string())
-        except Exception:
-            pass
+            logger.info("forgot-password: email sent to %s", email)
+        except Exception as exc:
+            logger.error("forgot-password: SMTP error: %s", exc)
     # Always show the same message to avoid email enumeration
     return templates.TemplateResponse(request, "forgot_password.html", {"sent": True, "error": None})
 
