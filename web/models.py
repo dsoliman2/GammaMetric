@@ -1,5 +1,5 @@
 """
-Database models for LeapfrogDose platform.
+Database models for GammaDose platform.
 Uses SQLite locally; set DATABASE_URL env var for PostgreSQL on Railway.
 """
 

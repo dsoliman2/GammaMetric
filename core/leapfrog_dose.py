@@ -522,7 +522,7 @@ def generate_summary(results: dict) -> str:
         p75 = data["stats"].get("p75", 0)
         bench_p75 = data["benchmark_comparison"].get("benchmarks", {}).get("p75", 0)
         pct_vs_median = data["benchmark_comparison"].get("pct_vs_national_median", 0)
-        count = data["stats"].get("count", 0)
+        count = data["stats"].get("n", data["stats"].get("count", 0))
 
         if status == "EXCELLENT":
             region_lines.append(

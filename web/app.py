@@ -1,5 +1,5 @@
 """
-LeapfrogDose Web App
+GammaDose Web App
 ====================
 FastAPI app — upload a Radimetrics CSV, get a Leapfrog-ready HTML report.
 Accounts + history storage for Phase 1 platform.
@@ -53,7 +53,7 @@ if RESEND_API_KEY:
     resend.api_key = RESEND_API_KEY
 
 # ── App setup ───────────────────────────────────────────────────────────────
-app = FastAPI(title="LeapfrogDose", docs_url=None, redoc_url=None)
+app = FastAPI(title="GammaDose", docs_url=None, redoc_url=None)
 templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
 
 @app.on_event("startup")
@@ -96,7 +96,7 @@ def _error(request, title, message, suggestions=None, status=422):
 
 def _send_email(to_address: str, subject: str, html: str, text: str):
     resend.Emails.send({
-        "from": f"LeapfrogDose <{EMAIL_FROM}>",
+        "from": f"GammaDose <{EMAIL_FROM}>",
         "to": [to_address],
         "subject": subject,
         "html": html,
@@ -107,9 +107,9 @@ def _send_email(to_address: str, subject: str, html: str, text: str):
 def _send_report_email(to_address: str, facility_name: str, html: str):
     _send_email(
         to_address,
-        subject=f"LeapfrogDose Report — {facility_name}",
+        subject=f"GammaDose Report — {facility_name}",
         html=html,
-        text=f"Your dose report for {facility_name} is ready.\n\n— LeapfrogDose by GammaMetric",
+        text=f"Your dose report for {facility_name} is ready.\n\n— GammaDose by GammaMetric",
     )
 
 
@@ -170,16 +170,16 @@ def _send_drift_alert(to_address: str, facility_name: str, drifts: list[dict]):
     </thead>
     <tbody>{rows_html}</tbody>
   </table>
-  <p style="color:#475569">Log in to LeapfrogDose to review your full report and protocol recommendations.</p>
-  <p style="color:#94a3b8;font-size:12px">— LeapfrogDose by GammaMetric</p>
+  <p style="color:#475569">Log in to GammaDose to review your full report and protocol recommendations.</p>
+  <p style="color:#94a3b8;font-size:12px">— GammaDose by GammaMetric</p>
 </div>"""
 
     text = (
         f"Dose drift detected — {facility_name}\n\n"
         f"The following regions have crossed above the ACR DIR benchmark:\n\n"
         f"{rows_text}\n"
-        "Log in to LeapfrogDose to review your full report.\n\n"
-        "— LeapfrogDose by GammaMetric"
+        "Log in to GammaDose to review your full report.\n\n"
+        "— GammaDose by GammaMetric"
     )
     _send_email(to_address, f"⚠ Dose drift detected — {facility_name}", html, text)
 
@@ -294,13 +294,13 @@ async def forgot_password_post(
                 f'<p>Click the link below to reset your password. The link expires in 1 hour.</p>'
                 f'<p><a href="{reset_url}">{reset_url}</a></p>'
                 f'<p>If you did not request this, ignore this email.</p>'
-                f'<p>— LeapfrogDose by GammaMetric</p>'
+                f'<p>— GammaDose by GammaMetric</p>'
             )
             reset_text = (
                 f"Reset your password here (expires in 1 hour):\n\n{reset_url}\n\n"
-                "If you did not request this, ignore this email.\n\n— LeapfrogDose by GammaMetric"
+                "If you did not request this, ignore this email.\n\n— GammaDose by GammaMetric"
             )
-            await asyncio.to_thread(_send_email, email, "LeapfrogDose — Password Reset", reset_html, reset_text)
+            await asyncio.to_thread(_send_email, email, "GammaDose — Password Reset", reset_html, reset_text)
             logger.info("forgot-password: email sent to %s", email)
         except Exception as exc:
             logger.error("forgot-password: Resend error: %s", exc)
@@ -569,7 +569,7 @@ async def analyze(
 
     if not col_info["region_ok"]:
         return _error(request, "No body region information found",
-                      "LeapfrogDose needs a Study Description or Body Region column.",
+                      "GammaDose needs a Study Description or Body Region column.",
                       [f"Columns found: {', '.join(df.columns.tolist()[:12])}"])
 
     fname = facility_name.strip() or (user.facility_name if user else "") or "Facility"
