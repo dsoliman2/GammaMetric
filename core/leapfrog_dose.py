@@ -470,8 +470,92 @@ def analyze_facility(df: pd.DataFrame, facility_name: str = "Facility") -> dict:
         "regions_above_benchmark": n_above,
         "total_outliers": len(results["outliers"]),
     }
-    
+
+    results["plain_english_summary"] = generate_summary(results)
+
     return results
+
+
+# ============================================================
+# PLAIN ENGLISH SUMMARY
+# ============================================================
+
+def generate_summary(results: dict) -> str:
+    """
+    Generate a plain English interpretation of the analysis results
+    for a radiology administrator or physicist.
+    """
+    facility = results.get("facility_name", "Your facility")
+    adult = results.get("adult", {})
+    summary = results.get("summary", {})
+    n_above = summary.get("regions_above_benchmark", 0)
+    n_regions = summary.get("regions_analyzed", 0)
+    n_exams = summary.get("total_adult_exams", 0)
+    outliers = summary.get("total_outliers", 0)
+
+    lines = []
+
+    # Opening
+    if n_regions == 0:
+        return "Insufficient data to generate a summary. Check that your CSV contains valid study descriptions and DLP values."
+
+    if n_above == 0:
+        lines.append(
+            f"{facility} is performing well across all {n_regions} analyzed region(s) — "
+            f"no adult CT protocols currently exceed the ACR DIR 75th percentile benchmark."
+        )
+    elif n_above == 1:
+        lines.append(
+            f"{facility} is within benchmark on most protocols, but one region currently "
+            f"exceeds the ACR DIR 75th percentile. Review the flagged region below."
+        )
+    else:
+        lines.append(
+            f"{facility} has {n_above} of {n_regions} regions exceeding the ACR DIR "
+            f"75th percentile benchmark. Protocol review is recommended."
+        )
+
+    # Per-region interpretation
+    region_lines = []
+    for region, data in adult.items():
+        status = data["benchmark_comparison"]["status"]
+        p75 = data["stats"].get("p75", 0)
+        bench_p75 = data["benchmark_comparison"].get("benchmarks", {}).get("p75", 0)
+        pct_vs_median = data["benchmark_comparison"].get("pct_vs_national_median", 0)
+        count = data["stats"].get("count", 0)
+
+        if status == "EXCELLENT":
+            region_lines.append(
+                f"<strong>{region}</strong>: Excellent — P75 of {p75:.0f} mGy·cm is at or below the achievable dose level ({count} exams)."
+            )
+        elif status == "GOOD":
+            region_lines.append(
+                f"<strong>{region}</strong>: Good — P75 of {p75:.0f} mGy·cm is below the national median ({count} exams)."
+            )
+        elif status == "ACCEPTABLE":
+            region_lines.append(
+                f"<strong>{region}</strong>: Acceptable — P75 of {p75:.0f} mGy·cm is between the national median and 75th percentile ({count} exams)."
+            )
+        elif status == "ABOVE BENCHMARK":
+            pct_over = ((p75 - bench_p75) / bench_p75 * 100) if bench_p75 else 0
+            region_lines.append(
+                f"<strong>{region}</strong>: Above benchmark — P75 of {p75:.0f} mGy·cm exceeds the ACR 75th percentile "
+                f"of {bench_p75:.0f} mGy·cm by {pct_over:.0f}%. Consider reviewing reconstruction parameters, "
+                f"kVp, and mAs settings for this protocol ({count} exams)."
+            )
+
+    if region_lines:
+        lines.append("<ul style='margin:.75rem 0 0 1rem;'>" +
+                     "".join(f"<li style='margin-bottom:.4rem'>{r}</li>" for r in region_lines) +
+                     "</ul>")
+
+    # Outliers
+    if outliers > 0:
+        lines.append(
+            f"{outliers} individual exam(s) exceeded 2× the regional 75th percentile and are flagged below for review."
+        )
+
+    return "\n".join(lines)
 
 
 # ============================================================

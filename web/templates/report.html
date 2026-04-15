@@ -410,6 +410,16 @@
     </div>
   </div>
 
+  <!-- ── Plain English Summary ── -->
+  {% if results.plain_english_summary %}
+  <section>
+    <div class="section-heading">Interpretation</div>
+    <div class="card" style="padding:1.25rem 1.5rem;font-size:.88rem;line-height:1.7;color:#1e293b;">
+      {{ results.plain_english_summary | safe }}
+    </div>
+  </section>
+  {% endif %}
+
   <!-- ── Adult ── -->
   <section>
     <div class="section-heading">Adult CT Dose Results &mdash; DLP (mGy&middot;cm)</div>
