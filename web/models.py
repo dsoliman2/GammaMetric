@@ -8,7 +8,7 @@ import json
 import platform
 from datetime import datetime
 
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text, ForeignKey, Float
 from sqlalchemy.orm import DeclarativeBase, sessionmaker, relationship
 
 _default_db = "sqlite:///./leapfrogdose.db" if platform.system() == "Windows" else "sqlite:////tmp/leapfrogdose.db"
@@ -55,6 +55,30 @@ class AnalysisResult(Base):
     @property
     def results(self) -> dict:
         return json.loads(self.results_json) if self.results_json else {}
+
+
+class DriftAlert(Base):
+    __tablename__ = "drift_alerts"
+
+    id               = Column(Integer, primary_key=True)
+    user_id          = Column(Integer, ForeignKey("users.id"), nullable=False)
+    analysis_id      = Column(Integer, ForeignKey("analysis_results.id"), nullable=False)
+    region           = Column(String, nullable=False)
+    old_status       = Column(String)
+    new_status       = Column(String)
+    old_p75          = Column(Float)
+    new_p75          = Column(Float)
+    created_at       = Column(DateTime, default=datetime.utcnow)
+    acknowledged_at  = Column(DateTime, nullable=True)
+    acknowledged_by  = Column(String, nullable=True)   # email
+    note             = Column(Text, nullable=True)
+
+    user     = relationship("User", backref="drift_alerts")
+    analysis = relationship("AnalysisResult", backref="drift_alerts")
+
+    @property
+    def is_acknowledged(self):
+        return self.acknowledged_at is not None
 
 
 def init_db():

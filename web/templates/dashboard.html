@@ -103,6 +103,37 @@
     <a class="btn-new" href="/">&#43; New Analysis</a>
   </div>
 
+  <!-- ── Pending alerts ── -->
+  {% if pending_alerts %}
+  <div class="section-heading" style="color:#991b1b;">&#9888; Pending Reviews ({{ pending_alerts | length }})</div>
+  <div class="analysis-list" style="margin-bottom:1.5rem;">
+    {% for alert in pending_alerts %}
+    <div class="analysis-card" style="border-left:4px solid #dc2626;">
+      <div class="analysis-date">{{ alert.created_at.strftime("%b %d") }}</div>
+      <div class="analysis-meta">
+        <div class="analysis-facility">{{ alert.region }}</div>
+        <div class="analysis-sub">
+          P75: {{ "%.0f"|format(alert.old_p75) }} → {{ "%.0f"|format(alert.new_p75) }} mGy·cm
+          &bull; {{ alert.old_status }} → <strong style="color:#dc2626">{{ alert.new_status }}</strong>
+        </div>
+      </div>
+      <form method="post" action="/alerts/{{ alert.id }}/acknowledge"
+            style="display:flex;align-items:center;gap:.6rem;flex-shrink:0;">
+        <input type="text" name="note" placeholder="Note (optional)"
+               style="padding:.4rem .7rem;border:1.5px solid #e2e8f0;border-radius:6px;font-size:.8rem;width:200px;">
+        <button type="submit"
+                style="padding:.4rem .9rem;background:#1a56b0;color:white;border:none;border-radius:6px;font-size:.8rem;font-weight:600;cursor:pointer;white-space:nowrap;">
+          Acknowledge
+        </button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+  <div style="text-align:right;margin-bottom:1.5rem;">
+    <a href="/alerts/log" style="font-size:.78rem;color:#1a56b0;text-decoration:none;">View full acknowledgment log →</a>
+  </div>
+  {% endif %}
+
   <!-- ── Trend chart ── -->
   {% if trend and analyses | length > 1 %}
   <div class="trend-card">

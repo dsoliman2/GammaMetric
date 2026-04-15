@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GammaDose — Dose Alert Acknowledgment Log</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy:#0f2342; --blue:#1a56b0; --border:#e2e8f0;
+      --bg:#f8fafc; --muted:#94a3b8; --slate:#475569;
+    }
+    body { font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+           background:var(--bg); color:#1e293b; min-height:100vh; display:flex; flex-direction:column; }
+    header { background:var(--navy); padding:0 2.5rem; height:60px;
+             display:flex; align-items:center; justify-content:space-between; }
+    .logo { display:flex; align-items:center; gap:.6rem; text-decoration:none; }
+    .logo-mark { width:32px; height:32px; background:var(--blue); border-radius:7px;
+                 display:flex; align-items:center; justify-content:center;
+                 font-size:.95rem; font-weight:800; color:white; }
+    .logo-text { color:white; font-size:1.05rem; font-weight:700; letter-spacing:-.02em; }
+    .logo-text span { color:var(--muted); font-weight:400; margin-left:.35rem; font-size:.8rem; }
+    .toolbar { background:white; border-bottom:1px solid var(--border);
+               padding:.6rem 2rem; display:flex; align-items:center; gap:1rem; }
+    .toolbar a { font-size:.82rem; color:var(--blue); text-decoration:none; }
+    .btn-print { margin-left:auto; padding:.42rem 1rem; background:var(--blue); color:white;
+                 border:none; border-radius:6px; font-size:.82rem; font-weight:600; cursor:pointer; }
+    main { max-width:960px; margin:0 auto; padding:2rem 1.5rem 4rem; width:100%; }
+    h1 { font-size:1.2rem; font-weight:800; margin-bottom:.25rem; }
+    .sub { font-size:.82rem; color:var(--slate); margin-bottom:1.5rem; }
+    table { width:100%; border-collapse:collapse; background:white;
+            border-radius:12px; overflow:hidden;
+            box-shadow:0 1px 8px rgba(0,0,0,.07); }
+    thead th { background:#f8fafc; padding:.65rem 1rem; text-align:left;
+               font-size:.7rem; font-weight:700; text-transform:uppercase;
+               letter-spacing:.06em; color:var(--slate);
+               border-bottom:1px solid var(--border); }
+    tbody td { padding:.75rem 1rem; font-size:.82rem;
+               border-bottom:1px solid var(--border); vertical-align:top; }
+    tbody tr:last-child td { border-bottom:none; }
+    .badge-ack { background:#dcfce7; color:#166534; padding:.15rem .55rem;
+                 border-radius:999px; font-size:.7rem; font-weight:600; white-space:nowrap; }
+    .badge-pending { background:#fee2e2; color:#991b1b; padding:.15rem .55rem;
+                     border-radius:999px; font-size:.7rem; font-weight:600; white-space:nowrap; }
+    .empty { text-align:center; padding:3rem; color:var(--muted); font-size:.88rem; }
+    footer { background:var(--navy); color:var(--muted); text-align:center;
+             padding:1.25rem; font-size:.78rem; }
+    @media print {
+      .toolbar { display:none; }
+      header { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+      body { background:white; }
+      table { box-shadow:none; border:1px solid var(--border); }
+    }
+  </style>
+</head>
+<body>
+<header>
+  <a class="logo" href="/">
+    <div class="logo-mark">&#947;</div>
+    <div class="logo-text">GammaDose <span>by GammaMetric</span></div>
+  </a>
+</header>
+
+<div class="toolbar">
+  <a href="/dashboard">&#8592; Dashboard</a>
+  <button class="btn-print" onclick="window.print()">&#128438; &nbsp;Print / Save PDF</button>
+</div>
+
+<main>
+  <h1>Dose Alert Acknowledgment Log</h1>
+  <p class="sub">{{ user.facility_name or user.email }} &mdash; All dose drift alerts and physicist sign-offs</p>
+
+  {% if alerts %}
+  <table>
+    <thead>
+      <tr>
+        <th>Date Detected</th>
+        <th>Region</th>
+        <th>P75 Change</th>
+        <th>Status Change</th>
+        <th>Acknowledged</th>
+        <th>Physicist</th>
+        <th>Note</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for a in alerts %}
+      <tr>
+        <td style="white-space:nowrap">{{ a.created_at.strftime("%b %d, %Y") }}</td>
+        <td><strong>{{ a.region }}</strong></td>
+        <td>{{ "%.0f"|format(a.old_p75) }} → {{ "%.0f"|format(a.new_p75) }} mGy·cm</td>
+        <td style="color:#dc2626;font-size:.78rem;">{{ a.old_status }} → {{ a.new_status }}</td>
+        <td>
+          {% if a.is_acknowledged %}
+            <span class="badge-ack">&#10003; {{ a.acknowledged_at.strftime("%b %d, %Y") }}</span>
+          {% else %}
+            <span class="badge-pending">Pending</span>
+          {% endif %}
+        </td>
+        <td style="font-size:.78rem;color:var(--slate)">{{ a.acknowledged_by or "—" }}</td>
+        <td style="font-size:.78rem;color:var(--slate)">{{ a.note or "—" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">No dose alerts recorded yet.</div>
+  {% endif %}
+</main>
+
+<footer>&copy; 2026 GammaMetric &mdash; Daniel Soliman, MS</footer>
+</body>
+</html>

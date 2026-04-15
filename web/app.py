@@ -41,7 +41,7 @@ from sqlalchemy.orm import Session
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from core.leapfrog_dose import load_radimetrics_csv, analyze_facility, COLUMN_MAPPINGS, BENCHMARK_VERSION
-from web.models import init_db, get_db, User, AnalysisResult
+from web.models import init_db, get_db, User, AnalysisResult, DriftAlert
 from web.auth import (hash_password, verify_password, set_session, clear_session,
                       get_user_id, make_reset_token, verify_reset_token)
 
@@ -374,10 +374,57 @@ async def dashboard(request: Request, db: Session = Depends(get_db)):
                 "status": data["benchmark_comparison"]["status"],
             })
 
+    pending_alerts = (
+        db.query(DriftAlert)
+        .filter(DriftAlert.user_id == user.id, DriftAlert.acknowledged_at == None)
+        .order_by(DriftAlert.created_at.desc())
+        .all()
+    )
+
     return templates.TemplateResponse(request, "dashboard.html", {
-        "user":     user,
-        "analyses": analyses,
-        "trend":    trend,
+        "user":           user,
+        "analyses":       analyses,
+        "trend":          trend,
+        "pending_alerts": pending_alerts,
+    })
+
+
+@app.post("/alerts/{alert_id}/acknowledge", response_class=HTMLResponse)
+async def acknowledge_alert(
+    alert_id: int,
+    request: Request,
+    note: str = Form(default=""),
+    db: Session = Depends(get_db),
+):
+    user = _get_current_user(request, db)
+    if not user:
+        return RedirectResponse("/login", status_code=302)
+    alert = db.query(DriftAlert).filter(
+        DriftAlert.id == alert_id,
+        DriftAlert.user_id == user.id,
+    ).first()
+    if alert:
+        from datetime import datetime as dt
+        alert.acknowledged_at = dt.utcnow()
+        alert.acknowledged_by = user.email
+        alert.note = note.strip() or None
+        db.commit()
+    return RedirectResponse("/dashboard", status_code=302)
+
+
+@app.get("/alerts/log", response_class=HTMLResponse)
+async def alerts_log(request: Request, db: Session = Depends(get_db)):
+    user = _get_current_user(request, db)
+    if not user:
+        return RedirectResponse("/login", status_code=302)
+    alerts = (
+        db.query(DriftAlert)
+        .filter(DriftAlert.user_id == user.id)
+        .order_by(DriftAlert.created_at.desc())
+        .all()
+    )
+    return templates.TemplateResponse(request, "alerts_log.html", {
+        "user": user, "alerts": alerts,
     })
 
 
@@ -551,12 +598,24 @@ async def analyze(
         saved_id = record.id
 
         # Drift alert — compare to previous upload
-        if prev_analysis and EMAIL_ENABLED:
+        if prev_analysis:
             drifts = _check_drift(prev_analysis.results, results)
             if drifts:
-                asyncio.create_task(
-                    asyncio.to_thread(_send_drift_alert, user.email, fname, drifts)
-                )
+                for d in drifts:
+                    db.add(DriftAlert(
+                        user_id=user.id,
+                        analysis_id=record.id,
+                        region=d["region"],
+                        old_status=d["old_status"],
+                        new_status=d["new_status"],
+                        old_p75=d["old_p75"],
+                        new_p75=d["new_p75"],
+                    ))
+                db.commit()
+                if EMAIL_ENABLED:
+                    asyncio.create_task(
+                        asyncio.to_thread(_send_drift_alert, user.email, fname, drifts)
+                    )
                 logger.info("drift-alert: %d region(s) drifted for %s", len(drifts), user.email)
 
     ctx = {
