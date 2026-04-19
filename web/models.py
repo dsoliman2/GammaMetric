@@ -8,7 +8,7 @@ import json
 import platform
 from datetime import datetime
 
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text, ForeignKey, Float
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text, ForeignKey, Boolean, Float
 from sqlalchemy.orm import DeclarativeBase, sessionmaker, relationship
 
 _default_db = "sqlite:///./leapfrogdose.db" if platform.system() == "Windows" else "sqlite:////tmp/leapfrogdose.db"
@@ -70,7 +70,7 @@ class DriftAlert(Base):
     new_p75          = Column(Float)
     created_at       = Column(DateTime, default=datetime.utcnow)
     acknowledged_at  = Column(DateTime, nullable=True)
-    acknowledged_by  = Column(String, nullable=True)   # email
+    acknowledged_by  = Column(String, nullable=True)
     note             = Column(Text, nullable=True)
 
     user     = relationship("User", backref="drift_alerts")
@@ -79,6 +79,28 @@ class DriftAlert(Base):
     @property
     def is_acknowledged(self):
         return self.acknowledged_at is not None
+
+
+class StudyResult(Base):
+    """One row per DICOM study ingested via the Orthanc webhook."""
+    __tablename__ = "study_results"
+
+    id                    = Column(Integer, primary_key=True)
+    study_instance_uid    = Column(String, unique=True, nullable=False, index=True)
+    acquisition_date      = Column(String)
+    scanner_model         = Column(String)
+    model_version         = Column(String)
+    slice_thickness_mm    = Column(Float)
+    reconstruction_kernel = Column(String)
+    ctdivol_mgy           = Column(Float)
+    kvp                   = Column(Float)
+    estimated_sensitivity = Column(Float)
+    degradation_pp        = Column(Float)
+    classification        = Column(String)
+    out_of_distribution   = Column(Boolean, default=False)
+    result_json           = Column(Text)
+    ingested_at           = Column(DateTime, default=datetime.utcnow)
+    alerted               = Column(Boolean, default=False)
 
 
 def init_db():
