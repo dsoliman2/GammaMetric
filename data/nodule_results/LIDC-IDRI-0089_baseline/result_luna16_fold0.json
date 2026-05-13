@@ -1,0 +1,21 @@
+[
+    {
+        "box": [
+            [
+                91.875,
+                -21.265625,
+                -256.5,
+                20.875,
+                21.125,
+                35.5
+            ]
+        ],
+        "label": [
+            0
+        ],
+        "label_scores": [
+            0.99853515625
+        ],
+        "image": "C:\\Users\\Dan\\Desktop\\gammametric_output\\LIDC-IDRI-0089_baseline.nii.gz"
+    }
+]

@@ -1,0 +1,21 @@
+[
+    {
+        "box": [
+            [
+                131.75,
+                -66.8125,
+                -43.03125,
+                19.3125,
+                19.65625,
+                9.375
+            ]
+        ],
+        "label": [
+            0
+        ],
+        "label_scores": [
+            0.032470703125
+        ],
+        "image": "C:\\Users\\Dan\\Desktop\\gammametric_output\\LIDC-IDRI-0013_dose_25pct.nii.gz"
+    }
+]

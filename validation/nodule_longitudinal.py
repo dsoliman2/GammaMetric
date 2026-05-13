@@ -25,7 +25,7 @@ from core.sensitivity_engine import SensitivityInput, compute as compute_sensiti
 
 RESULTS_BASE       = os.getenv(
     "NODULE_RESULTS_DIR",
-    r'C:\Users\Dan\Desktop\gammametric_output\nodule_results_each',
+    str(os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "nodule_results")),
 )
 CONF_THRESHOLD     = 0.5
 MATCH_DIST_MM      = 15.0
