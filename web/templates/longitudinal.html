@@ -117,16 +117,28 @@
     .delta-warn { color: var(--red-text); font-weight: 600; }
     .delta-ok   { color: #1e293b; }
 
-    /* Unmatched section */
-    .section-label {
-      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.07em; color: var(--muted); margin: 1.25rem 0 0.75rem;
+    /* Clinical finding banners */
+    .finding-banner {
+      border-radius: 9px; padding: 1rem 1.25rem; margin-bottom: 1.25rem;
+      border: 1px solid;
     }
-    .unmatched-item {
-      font-size: 0.83rem; color: var(--slate); padding: 0.4rem 0;
-      border-bottom: 1px solid var(--border);
+    .finding-banner.disappearance { background: #fff7ed; border-color: #fed7aa; }
+    .finding-banner.appearance    { background: var(--yellow-bg); border-color: var(--yellow-border); }
+    .finding-title {
+      font-size: 0.9rem; font-weight: 700; margin-bottom: 0.6rem;
     }
-    .unmatched-item:last-child { border-bottom: none; }
+    .finding-banner.disappearance .finding-title { color: #c2410c; }
+    .finding-banner.appearance    .finding-title { color: var(--yellow-text); }
+    .finding-item {
+      font-size: 0.83rem; color: var(--slate); padding: 0.3rem 0;
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+    }
+    .finding-item:last-child { border-bottom: none; }
+
+    /* Table legend */
+    .table-legend {
+      font-size: 0.75rem; color: var(--muted); margin-top: 0.75rem; line-height: 1.6;
+    }
 
     /* Share URL */
     .share-row { display: flex; align-items: center; gap: 0.75rem; margin-top: 1.25rem; }
@@ -244,7 +256,35 @@
 
   <!-- Matched nodules -->
   <div class="card">
-    <p class="card-title">Matched Nodules &mdash; {{ result.matched|length }} pair{% if result.matched|length != 1 %}s{% endif %}</p>
+    <p class="card-title">Findings</p>
+
+    {% if result.only_in_a %}
+    <div class="finding-banner disappearance">
+      <p class="finding-title">&#9888; Nodule{% if result.only_in_a|length > 1 %}s{% endif %} Not Detected in Study B &mdash; {{ result.only_in_a|length }} apparent disappearance{% if result.only_in_a|length > 1 %}s{% endif %}</p>
+      {% for d in result.only_in_a %}
+      <div class="finding-item">
+        Centroid ({{ "%.1f"|format(d.centroid_mm[0]) }}, {{ "%.1f"|format(d.centroid_mm[1]) }}, {{ "%.1f"|format(d.centroid_mm[2]) }}) mm
+        &nbsp;&bull;&nbsp; Diameter {{ "%.1f"|format(d.diameter_mm) }} mm
+        &nbsp;&bull;&nbsp; Confidence {{ "%.3f"|format(d.confidence) }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if result.only_in_b %}
+    <div class="finding-banner appearance">
+      <p class="finding-title">&#9651; Nodule{% if result.only_in_b|length > 1 %}s{% endif %} Not Present in Study A &mdash; {{ result.only_in_b|length }} apparent new detection{% if result.only_in_b|length > 1 %}s{% endif %}</p>
+      {% for d in result.only_in_b %}
+      <div class="finding-item">
+        Centroid ({{ "%.1f"|format(d.centroid_mm[0]) }}, {{ "%.1f"|format(d.centroid_mm[1]) }}, {{ "%.1f"|format(d.centroid_mm[2]) }}) mm
+        &nbsp;&bull;&nbsp; Diameter {{ "%.1f"|format(d.diameter_mm) }} mm
+        &nbsp;&bull;&nbsp; Confidence {{ "%.3f"|format(d.confidence) }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <p class="card-title" style="margin-top:{% if result.only_in_a or result.only_in_b %}0.5rem{% else %}0{% endif %}">Matched Nodule Pairs &mdash; {{ result.matched|length }} pair{% if result.matched|length != 1 %}s{% endif %}</p>
 
     {% if result.matched %}
     <table>
@@ -255,9 +295,9 @@
           <th>Diam B</th>
           <th>&Delta; mm</th>
           <th>&Delta; %</th>
-          <th>Conf A</th>
-          <th>Conf B</th>
-          <th>Centroid dist</th>
+          <th title="Model detection confidence score (0–1). Higher values indicate stronger detection certainty.">Conf A &#9432;</th>
+          <th title="Model detection confidence score (0–1). Higher values indicate stronger detection certainty.">Conf B &#9432;</th>
+          <th title="Distance between matched nodule centers in millimeters">Centroid dist &#9432;</th>
           <th>Flag</th>
         </tr>
       </thead>
@@ -283,31 +323,11 @@
         {% endfor %}
       </tbody>
     </table>
+    <p class="table-legend">Conf = model detection confidence (0–1) &nbsp;&bull;&nbsp; Centroid dist = distance between matched nodule centers</p>
     {% else %}
     <p class="empty-state">No matched nodule pairs found for this comparison.</p>
     {% endif %}
 
-    {% if result.only_in_a %}
-    <p class="section-label">Detected in Study A only &mdash; apparent disappearance in Study B ({{ result.only_in_a|length }})</p>
-    {% for d in result.only_in_a %}
-    <div class="unmatched-item">
-      Centroid ({{ "%.1f"|format(d.centroid_mm[0]) }}, {{ "%.1f"|format(d.centroid_mm[1]) }}, {{ "%.1f"|format(d.centroid_mm[2]) }}) mm
-      &nbsp;&bull;&nbsp; Diameter {{ "%.1f"|format(d.diameter_mm) }} mm
-      &nbsp;&bull;&nbsp; Conf {{ "%.3f"|format(d.confidence) }}
-    </div>
-    {% endfor %}
-    {% endif %}
-
-    {% if result.only_in_b %}
-    <p class="section-label">Detected in Study B only &mdash; apparent new nodule vs Study A ({{ result.only_in_b|length }})</p>
-    {% for d in result.only_in_b %}
-    <div class="unmatched-item">
-      Centroid ({{ "%.1f"|format(d.centroid_mm[0]) }}, {{ "%.1f"|format(d.centroid_mm[1]) }}, {{ "%.1f"|format(d.centroid_mm[2]) }}) mm
-      &nbsp;&bull;&nbsp; Diameter {{ "%.1f"|format(d.diameter_mm) }} mm
-      &nbsp;&bull;&nbsp; Conf {{ "%.3f"|format(d.confidence) }}
-    </div>
-    {% endfor %}
-    {% endif %}
   </div>
 
   <!-- Share URL -->
