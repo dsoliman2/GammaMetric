@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GammaMetric — Longitudinal Comparability</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy: #0f2342; --blue: #1a56b0; --border: #e2e8f0;
+      --bg: #f8fafc; --muted: #94a3b8; --slate: #475569;
+      --green-bg: #dcfce7; --green-text: #15803d; --green-border: #86efac;
+      --yellow-bg: #fef9c3; --yellow-text: #a16207; --yellow-border: #fde047;
+      --red-bg: #fee2e2; --red-text: #dc2626; --red-border: #fca5a5;
+    }
+    body {
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg); color: #1e293b; min-height: 100vh;
+      display: flex; flex-direction: column;
+    }
+    header {
+      background: var(--navy); padding: 0 2.5rem; height: 60px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .logo { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; }
+    .logo-mark {
+      width: 32px; height: 32px; background: var(--blue); border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.95rem; font-weight: 800; color: white;
+    }
+    .logo-text { color: white; font-size: 1.05rem; font-weight: 700; letter-spacing: -0.02em; }
+    .logo-text span { color: var(--muted); font-weight: 400; margin-left: 0.35rem; font-size: 0.8rem; }
+    .nav-link { color: var(--muted); text-decoration: none; font-size: 0.82rem; }
+    .nav-link:hover { color: white; }
+
+    main { flex: 1; padding: 2.5rem 1rem; max-width: 860px; margin: 0 auto; width: 100%; }
+
+    h1 { font-size: 1.35rem; font-weight: 700; color: var(--navy); margin-bottom: 0.35rem; }
+    .subtitle { font-size: 0.875rem; color: var(--slate); margin-bottom: 2rem; line-height: 1.5; }
+
+    .card {
+      background: white; border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07); border: 1px solid var(--border);
+      padding: 1.75rem; margin-bottom: 1.5rem;
+    }
+    .card-title {
+      font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.07em; color: var(--muted); margin-bottom: 1.25rem;
+    }
+
+    /* Form */
+    .form-row { display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end; }
+    .form-group { display: flex; flex-direction: column; gap: 0.4rem; flex: 1; min-width: 160px; }
+    label { font-size: 0.8rem; font-weight: 600; color: var(--slate); }
+    select {
+      padding: 0.6rem 0.85rem; border: 1px solid var(--border); border-radius: 7px;
+      font-size: 0.875rem; background: white; color: #1e293b;
+      appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%2394a3b8' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 0.75rem center;
+      padding-right: 2rem; cursor: pointer;
+    }
+    select:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(26,86,176,0.12); }
+    .btn {
+      padding: 0.65rem 1.5rem; background: var(--blue); color: white;
+      border: none; border-radius: 7px; font-size: 0.9rem; font-weight: 600;
+      cursor: pointer; white-space: nowrap;
+    }
+    .btn:hover { background: #1648a0; }
+
+    /* Error */
+    .error-banner {
+      background: var(--red-bg); border: 1px solid var(--red-border);
+      border-radius: 8px; padding: 0.85rem 1rem;
+      font-size: 0.875rem; color: var(--red-text); margin-bottom: 1.5rem;
+    }
+
+    /* Acquisition badges */
+    .acq-row { display: flex; gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .acq-badge {
+      flex: 1; min-width: 200px; border-radius: 9px; padding: 1rem 1.25rem;
+      border: 1px solid; display: flex; flex-direction: column; gap: 0.3rem;
+    }
+    .acq-badge.GREEN  { background: var(--green-bg);  border-color: var(--green-border); }
+    .acq-badge.YELLOW { background: var(--yellow-bg); border-color: var(--yellow-border); }
+    .acq-badge.RED    { background: var(--red-bg);    border-color: var(--red-border); }
+    .acq-badge.UNKNOWN { background: #f1f5f9; border-color: #cbd5e1; }
+    .acq-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--slate); }
+    .acq-status { font-size: 1.15rem; font-weight: 800; }
+    .acq-badge.GREEN  .acq-status { color: var(--green-text); }
+    .acq-badge.YELLOW .acq-status { color: var(--yellow-text); }
+    .acq-badge.RED    .acq-status { color: var(--red-text); }
+    .acq-badge.UNKNOWN .acq-status { color: var(--slate); }
+    .acq-detail { font-size: 0.8rem; color: var(--slate); }
+
+    /* Comparability note */
+    .note-banner {
+      border-radius: 8px; padding: 0.85rem 1rem;
+      font-size: 0.85rem; line-height: 1.55; margin-bottom: 1.5rem;
+      border: 1px solid;
+    }
+    .note-banner.comparable     { background: var(--green-bg);  border-color: var(--green-border);  color: var(--green-text); }
+    .note-banner.not-comparable { background: var(--red-bg);    border-color: var(--red-border);    color: var(--red-text); }
+    .note-banner.caution        { background: var(--yellow-bg); border-color: var(--yellow-border); color: var(--yellow-text); }
+
+    /* Tables */
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    thead tr { border-bottom: 2px solid var(--border); }
+    th { padding: 0.55rem 0.75rem; text-align: left; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+    td { padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: #f8fafc; }
+
+    .flag-cell { font-size: 0.78rem; font-weight: 600; }
+    .flag-noise { color: var(--red-text); }
+    .flag-ok    { color: var(--muted); }
+
+    .delta-warn { color: var(--red-text); font-weight: 600; }
+    .delta-ok   { color: #1e293b; }
+
+    /* Unmatched section */
+    .section-label {
+      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.07em; color: var(--muted); margin: 1.25rem 0 0.75rem;
+    }
+    .unmatched-item {
+      font-size: 0.83rem; color: var(--slate); padding: 0.4rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .unmatched-item:last-child { border-bottom: none; }
+
+    /* Share URL */
+    .share-row { display: flex; align-items: center; gap: 0.75rem; margin-top: 1.25rem; }
+    .share-label { font-size: 0.78rem; color: var(--muted); white-space: nowrap; }
+    .share-url {
+      font-size: 0.78rem; color: var(--blue); font-family: monospace;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+      padding: 0.35rem 0.65rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      flex: 1; cursor: pointer;
+    }
+    .copy-btn {
+      padding: 0.35rem 0.8rem; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 6px; font-size: 0.78rem; cursor: pointer; color: var(--slate);
+    }
+    .copy-btn:hover { background: var(--border); }
+
+    .empty-state { color: var(--muted); font-size: 0.875rem; padding: 1rem 0; }
+
+    footer {
+      background: var(--navy); color: var(--muted);
+      text-align: center; padding: 1.25rem; font-size: 0.78rem;
+    }
+  </style>
+</head>
+<body>
+<header>
+  <a class="logo" href="/">
+    <div class="logo-mark">&#947;</div>
+    <div class="logo-text">GammaMetric <span>Longitudinal Comparability</span></div>
+  </a>
+  <a class="nav-link" href="/">&#8592; GammaDose</a>
+</header>
+
+<main>
+  <h1>Longitudinal Nodule Comparability</h1>
+  <p class="subtitle">
+    Compare lung nodule detection between two acquisition conditions for the same case.
+    Diameter changes are flagged when they exceed measurement noise (2 mm),
+    and each study is scored for acquisition reliability.
+  </p>
+
+  <!-- Form -->
+  <div class="card">
+    <p class="card-title">Select Study Comparison</p>
+    <form method="get" action="/longitudinal">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="case_id">Case ID</label>
+          <select name="case_id" id="case_id" required>
+            <option value="" disabled {% if not case_id %}selected{% endif %}>— select case —</option>
+            {% for c in cases %}
+            <option value="{{ c }}" {% if c == case_id %}selected{% endif %}>{{ c }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="condition_a">Study A (Prior)</label>
+          <select name="condition_a" id="condition_a" required>
+            <option value="" disabled {% if not condition_a %}selected{% endif %}>— select —</option>
+            {% for cond in conditions %}
+            <option value="{{ cond }}" {% if cond == condition_a %}selected{% endif %}>{{ condition_labels[cond] }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="condition_b">Study B (Current)</label>
+          <select name="condition_b" id="condition_b" required>
+            <option value="" disabled {% if not condition_b %}selected{% endif %}>— select —</option>
+            {% for cond in conditions %}
+            <option value="{{ cond }}" {% if cond == condition_b %}selected{% endif %}>{{ condition_labels[cond] }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button class="btn" type="submit">Compare Studies</button>
+      </div>
+    </form>
+  </div>
+
+  {% if error %}
+  <div class="error-banner">&#9888; {{ error }}</div>
+  {% endif %}
+
+  {% if result %}
+
+  <!-- Acquisition reliability -->
+  <div class="card">
+    <p class="card-title">Acquisition Reliability</p>
+    <div class="acq-row">
+      {% set cls_a = result.acq_a.classification %}
+      {% set cls_b = result.acq_b.classification %}
+      <div class="acq-badge {{ cls_a }}">
+        <span class="acq-label">Study A — {{ result.condition_a }}</span>
+        <span class="acq-status">{{ cls_a }}</span>
+        {% if result.acq_a.degradation_pp is not none %}
+        <span class="acq-detail">{{ "%.1f"|format(result.acq_a.degradation_pp) }} pp degradation &nbsp;&bull;&nbsp; Est. sensitivity {{ "%.1f"|format(result.acq_a.estimated_sensitivity * 100) }}%</span>
+        {% endif %}
+      </div>
+      <div class="acq-badge {{ cls_b }}">
+        <span class="acq-label">Study B — {{ result.condition_b }}</span>
+        <span class="acq-status">{{ cls_b }}</span>
+        {% if result.acq_b.degradation_pp is not none %}
+        <span class="acq-detail">{{ "%.1f"|format(result.acq_b.degradation_pp) }} pp degradation &nbsp;&bull;&nbsp; Est. sensitivity {{ "%.1f"|format(result.acq_b.estimated_sensitivity * 100) }}%</span>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if not result.comparable %}
+    <div class="note-banner not-comparable">&#9888; {{ result.comparability_note }}</div>
+    {% elif "caution" in result.comparability_note.lower() or "yellow" in result.comparability_note.lower() %}
+    <div class="note-banner caution">&#9651; {{ result.comparability_note }}</div>
+    {% else %}
+    <div class="note-banner comparable">&#10003; {{ result.comparability_note }}</div>
+    {% endif %}
+  </div>
+
+  <!-- Matched nodules -->
+  <div class="card">
+    <p class="card-title">Matched Nodules &mdash; {{ result.matched|length }} pair{% if result.matched|length != 1 %}s{% endif %}</p>
+
+    {% if result.matched %}
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Diam A</th>
+          <th>Diam B</th>
+          <th>&Delta; mm</th>
+          <th>&Delta; %</th>
+          <th>Conf A</th>
+          <th>Conf B</th>
+          <th>Centroid dist</th>
+          <th>Flag</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in result.matched %}
+        <tr>
+          <td>{{ p.nodule_id }}</td>
+          <td>{{ "%.1f"|format(p.study_a.diameter_mm) }} mm</td>
+          <td>{{ "%.1f"|format(p.study_b.diameter_mm) }} mm</td>
+          <td class="{% if p.exceeds_noise %}delta-warn{% else %}delta-ok{% endif %}">
+            {% if p.diameter_delta_mm > 0 %}+{% endif %}{{ "%.2f"|format(p.diameter_delta_mm) }}
+          </td>
+          <td class="{% if p.exceeds_noise %}delta-warn{% else %}delta-ok{% endif %}">
+            {% if p.diameter_delta_pct > 0 %}+{% endif %}{{ "%.1f"|format(p.diameter_delta_pct) }}%
+          </td>
+          <td>{{ "%.3f"|format(p.study_a.confidence) }}</td>
+          <td>{{ "%.3f"|format(p.study_b.confidence) }}</td>
+          <td>{{ "%.1f"|format(p.centroid_dist_mm) }} mm</td>
+          <td class="flag-cell {% if p.exceeds_noise %}flag-noise{% else %}flag-ok{% endif %}">
+            {% if p.exceeds_noise %}exceeds noise threshold{% else %}&mdash;{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="empty-state">No matched nodule pairs found for this comparison.</p>
+    {% endif %}
+
+    {% if result.only_in_a %}
+    <p class="section-label">Detected in Study A only &mdash; apparent disappearance in Study B ({{ result.only_in_a|length }})</p>
+    {% for d in result.only_in_a %}
+    <div class="unmatched-item">
+      Centroid ({{ "%.1f"|format(d.centroid_mm[0]) }}, {{ "%.1f"|format(d.centroid_mm[1]) }}, {{ "%.1f"|format(d.centroid_mm[2]) }}) mm
+      &nbsp;&bull;&nbsp; Diameter {{ "%.1f"|format(d.diameter_mm) }} mm
+      &nbsp;&bull;&nbsp; Conf {{ "%.3f"|format(d.confidence) }}
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    {% if result.only_in_b %}
+    <p class="section-label">Detected in Study B only &mdash; apparent new nodule vs Study A ({{ result.only_in_b|length }})</p>
+    {% for d in result.only_in_b %}
+    <div class="unmatched-item">
+      Centroid ({{ "%.1f"|format(d.centroid_mm[0]) }}, {{ "%.1f"|format(d.centroid_mm[1]) }}, {{ "%.1f"|format(d.centroid_mm[2]) }}) mm
+      &nbsp;&bull;&nbsp; Diameter {{ "%.1f"|format(d.diameter_mm) }} mm
+      &nbsp;&bull;&nbsp; Conf {{ "%.3f"|format(d.confidence) }}
+    </div>
+    {% endfor %}
+    {% endif %}
+  </div>
+
+  <!-- Share URL -->
+  <div class="share-row">
+    <span class="share-label">Shareable link:</span>
+    <span class="share-url" id="shareUrl" onclick="copyUrl()"></span>
+    <button class="copy-btn" onclick="copyUrl()" id="copyBtn">Copy</button>
+  </div>
+
+  <script>
+    const url = window.location.href;
+    document.getElementById('shareUrl').textContent = url;
+    function copyUrl() {
+      navigator.clipboard.writeText(url).then(() => {
+        const btn = document.getElementById('copyBtn');
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy', 1800);
+      });
+    }
+  </script>
+
+  {% endif %}
+</main>
+
+<footer>&copy; 2026 GammaMetric &mdash; Daniel Soliman, MS &nbsp;&mdash;&nbsp; Validated on 183 LIDC-IDRI cases</footer>
+</body>
+</html>

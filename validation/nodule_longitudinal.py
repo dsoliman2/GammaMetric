@@ -23,7 +23,10 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from core.sensitivity_engine import SensitivityInput, compute as compute_sensitivity
 
-RESULTS_BASE       = r'C:\Users\Dan\Desktop\gammametric_output\nodule_results_each'
+RESULTS_BASE       = os.getenv(
+    "NODULE_RESULTS_DIR",
+    r'C:\Users\Dan\Desktop\gammametric_output\nodule_results_each',
+)
 CONF_THRESHOLD     = 0.5
 MATCH_DIST_MM      = 15.0
 # Below this diameter delta, change is indistinguishable from measurement noise

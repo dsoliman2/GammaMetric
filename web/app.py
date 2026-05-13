@@ -45,6 +45,7 @@ from web.models import init_db, get_db, User, AnalysisResult, DriftAlert
 from web.auth import (hash_password, verify_password, set_session, clear_session,
                       get_user_id, make_reset_token, verify_reset_token)
 from web.sensitivity_router import router as sensitivity_router
+from web.longitudinal_router import router as longitudinal_router
 
 # ── Email config ────────────────────────────────────────────────────────────
 RESEND_API_KEY = os.getenv("RESEND_API_KEY", os.getenv("SMTP_PASS", ""))
@@ -56,6 +57,7 @@ if RESEND_API_KEY:
 # ── App setup ───────────────────────────────────────────────────────────────
 app = FastAPI(title="GammaDose", docs_url=None, redoc_url=None)
 app.include_router(sensitivity_router)
+app.include_router(longitudinal_router)
 templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
 
 @app.on_event("startup")
