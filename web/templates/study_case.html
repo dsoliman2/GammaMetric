@@ -258,7 +258,7 @@
 
   <div class="case-header">
     <h1>Case {{ n }} of {{ total }}</h1>
-    <p>Review all three panels before recording your management recommendation.</p>
+    <p>Review the panels below, then record your management recommendation.</p>
   </div>
 
   <!-- ── 1. Clinical Context ─────────────────────────────────────────────── -->
@@ -343,15 +343,14 @@
     </div>
   </div>
 
-  <!-- ── 3. Acquisition Reliability ────────────────────────────────────── -->
+  <!-- ── 3. Acquisition Reliability (flag condition only) ─────────────── -->
+  {% if show_flag %}
   <div class="section">
     <div class="section-head">
       <div class="section-num">3</div>
       <span class="section-title">Acquisition Reliability Assessment</span>
     </div>
     <div class="section-body">
-
-      {% if show_flag %}
       <div class="acq-panel acq-panel-{{ case.comparability | lower }}">
         <div>
           <span class="acq-badge badge-{{ case.comparability | lower }}">
@@ -363,19 +362,14 @@
         </div>
         <div class="acq-detail">{{ case.detail }}</div>
       </div>
-      {% else %}
-      <div class="acq-hidden">
-        Acquisition reliability assessment not available for this case.
-      </div>
-      {% endif %}
-
     </div>
   </div>
+  {% endif %}
 
-  <!-- ── 4. Management Recommendation ──────────────────────────────────── -->
+  <!-- ── Management Recommendation (section 3 or 4 depending on condition) -->
   <div class="section">
     <div class="section-head">
-      <div class="section-num">4</div>
+      <div class="section-num">{% if show_flag %}4{% else %}3{% endif %}</div>
       <span class="section-title">Management Recommendation</span>
     </div>
     <div class="section-body">
