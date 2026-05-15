@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Case {{ n }} of {{ total }} — GammaMetric Study</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy: #0f2342;
+      --blue: #1a56db;
+      --green: #16a34a;
+      --yellow: #a16207;
+      --red: #b91c1c;
+      --border: #e2e8f0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #1e293b; }
+
+    header {
+      background: var(--navy);
+      padding: 0.85rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header a { color: #fff; text-decoration: none; font-weight: 700; font-size: 1rem; }
+    .progress-text { color: #94a3b8; font-size: 0.85rem; }
+
+    .progress-bar-wrap { background: #1e3a5f; height: 4px; }
+    .progress-bar { background: #3b82f6; height: 4px; transition: width 0.3s; }
+
+    .container { max-width: 780px; margin: 2rem auto; padding: 0 1.5rem 4rem; }
+
+    .case-header { margin-bottom: 1.5rem; }
+    .case-header h1 { font-size: 1.25rem; font-weight: 700; color: var(--navy); }
+    .case-header p { font-size: 0.85rem; color: #64748b; margin-top: 0.25rem; }
+
+    .scan-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+    @media (max-width: 580px) { .scan-grid { grid-template-columns: 1fr; } }
+
+    .scan-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem;
+    }
+    .scan-card h2 {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #64748b;
+      margin-bottom: 0.75rem;
+    }
+    .acq-params {
+      font-size: 0.78rem;
+      color: #94a3b8;
+      margin-bottom: 0.75rem;
+    }
+
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    th { text-align: left; font-weight: 600; color: #374151; padding: 0.4rem 0.5rem;
+         border-bottom: 2px solid var(--border); }
+    td { padding: 0.45rem 0.5rem; border-bottom: 1px solid #f1f5f9; }
+
+    .detected-yes { color: var(--green); font-weight: 600; }
+    .detected-no  { color: var(--red); font-weight: 600; }
+
+    /* Acquisition flag */
+    .flag-box {
+      border-radius: 8px;
+      padding: 0.9rem 1.1rem;
+      margin-bottom: 1.25rem;
+      font-size: 0.875rem;
+      line-height: 1.55;
+    }
+    .flag-green  { background: #f0fdf4; border: 1px solid #86efac; }
+    .flag-yellow { background: #fefce8; border: 1px solid #fde047; }
+    .flag-red    { background: #fff1f2; border: 1px solid #fca5a5; }
+
+    .flag-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-weight: 700;
+      font-size: 0.8rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: 99px;
+      margin-bottom: 0.5rem;
+    }
+    .flag-label-green  { background: #dcfce7; color: #15803d; }
+    .flag-label-yellow { background: #fef9c3; color: #a16207; }
+    .flag-label-red    { background: #fee2e2; color: #b91c1c; }
+
+    .flag-detail { color: #475569; }
+
+    /* Decision */
+    .decision-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.5rem;
+    }
+    .decision-card h2 { font-size: 0.95rem; font-weight: 700; color: var(--navy); margin-bottom: 1rem; }
+
+    .radio-option {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 0.65rem;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .radio-option:has(input:checked) {
+      border-color: var(--blue);
+      background: #eff6ff;
+    }
+    .radio-option input[type="radio"] { margin-top: 2px; accent-color: var(--blue); flex-shrink: 0; }
+    .radio-option .label-text { font-size: 0.9rem; font-weight: 600; color: #1e293b; }
+    .radio-option .label-sub  { font-size: 0.8rem; color: #64748b; margin-top: 0.1rem; }
+
+    .submit-row { margin-top: 1.25rem; }
+    .btn {
+      background: var(--blue);
+      color: #fff;
+      padding: 0.75rem 2rem;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      width: 100%;
+    }
+    .btn:hover { background: #1d4ed8; }
+    .btn:disabled { background: #94a3b8; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="/">GammaMetric</a>
+  <span class="progress-text">Case {{ n }} of {{ total }}</span>
+</header>
+<div class="progress-bar-wrap">
+  <div class="progress-bar" style="width: {{ progress }}%"></div>
+</div>
+
+<div class="container">
+
+  <div class="case-header">
+    <h1>Case {{ n }} of {{ total }}</h1>
+    <p>Review the prior and follow-up CT results below, then record your management recommendation.</p>
+  </div>
+
+  <!-- Scan comparison -->
+  <div class="scan-grid">
+
+    <div class="scan-card">
+      <h2>Prior CT</h2>
+      <div class="acq-params">1.25 mm reconstruction · Standard kernel · ~10 mGy</div>
+      <table>
+        <tr>
+          <th>AI result</th>
+          <th>Diameter</th>
+        </tr>
+        {% if case.prior_det %}
+        <tr>
+          <td class="detected-yes">Detected</td>
+          <td>{{ case.diam_mm }} mm</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td class="detected-no">Not detected</td>
+          <td>—</td>
+        </tr>
+        {% endif %}
+      </table>
+    </div>
+
+    <div class="scan-card">
+      <h2>Follow-up CT</h2>
+      <div class="acq-params">5 mm reconstruction · Standard kernel · ~10 mGy</div>
+      <table>
+        <tr>
+          <th>AI result</th>
+          <th>Diameter</th>
+        </tr>
+        {% if case.fu_det %}
+        <tr>
+          <td class="detected-yes">Detected</td>
+          <td>{{ case.diam_mm }} mm</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td class="detected-no">Not detected</td>
+          <td>—</td>
+        </tr>
+        {% endif %}
+      </table>
+    </div>
+
+  </div>
+
+  <!-- Acquisition reliability flag (conditional) -->
+  {% if show_flag %}
+  <div class="flag-box flag-{{ case.comparability | lower }}">
+    <div>
+      <span class="flag-label flag-label-{{ case.comparability | lower }}">
+        {% if case.comparability == 'GREEN' %}✓ Comparable acquisition
+        {% elif case.comparability == 'YELLOW' %}⚠ Reduced AI sensitivity
+        {% else %}⚠ Unreliable AI comparison
+        {% endif %}
+      </span>
+    </div>
+    <div class="flag-detail">{{ case.detail }}</div>
+  </div>
+  {% endif %}
+
+  <!-- Management decision -->
+  <div class="decision-card">
+    <h2>Management recommendation</h2>
+
+    <form method="POST" action="/study/{{ token }}/case/{{ n }}" id="caseForm">
+      <input type="hidden" name="case_idx" value="{{ case_idx }}">
+      <input type="hidden" name="show_flag" value="{{ show_flag }}">
+      <input type="hidden" name="response_time_sec" id="responseTime" value="0">
+
+      <label class="radio-option">
+        <input type="radio" name="management_decision" value="surveillance" required>
+        <div>
+          <div class="label-text">Continue routine surveillance</div>
+          <div class="label-sub">Standard follow-up interval per guidelines</div>
+        </div>
+      </label>
+
+      <label class="radio-option">
+        <input type="radio" name="management_decision" value="shorten">
+        <div>
+          <div class="label-text">Shorten follow-up interval</div>
+          <div class="label-sub">Earlier repeat CT warranted given findings</div>
+        </div>
+      </label>
+
+      <label class="radio-option">
+        <input type="radio" name="management_decision" value="escalate">
+        <div>
+          <div class="label-text">Escalate workup</div>
+          <div class="label-sub">Biopsy, PET, or specialist referral indicated</div>
+        </div>
+      </label>
+
+      <div class="submit-row">
+        <button class="btn" type="submit" id="submitBtn" disabled>
+          {% if n < total %}Next case →{% else %}Complete study →{% endif %}
+        </button>
+      </div>
+    </form>
+  </div>
+
+</div>
+
+<script>
+  const startTime = Date.now();
+
+  // Enable submit only when an option is selected
+  const radios = document.querySelectorAll('input[type="radio"]');
+  const btn = document.getElementById('submitBtn');
+  radios.forEach(r => r.addEventListener('change', () => {
+    btn.disabled = false;
+  }));
+
+  // Record time on submission
+  document.getElementById('caseForm').addEventListener('submit', () => {
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    document.getElementById('responseTime').value = elapsed;
+  });
+</script>
+</body>
+</html>

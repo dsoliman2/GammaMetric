@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Study Complete — GammaMetric</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --navy: #0f2342; --blue: #1a56db; --border: #e2e8f0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #1e293b; }
+    header {
+      background: var(--navy);
+      padding: 1rem 2rem;
+    }
+    header a { color: #fff; text-decoration: none; font-weight: 700; font-size: 1rem; }
+    .container { max-width: 580px; margin: 4rem auto; padding: 0 1.5rem; text-align: center; }
+    .check { font-size: 3rem; margin-bottom: 1rem; }
+    h1 { font-size: 1.6rem; font-weight: 700; color: var(--navy); margin-bottom: 0.5rem; }
+    .subtitle { color: #64748b; font-size: 0.95rem; margin-bottom: 2rem; line-height: 1.6; }
+    .card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.5rem;
+      text-align: left;
+      margin-bottom: 1.25rem;
+    }
+    .card h2 { font-size: 0.9rem; font-weight: 700; color: var(--navy); margin-bottom: 0.5rem; }
+    .card p { font-size: 0.875rem; color: #475569; line-height: 1.6; }
+    .stat { font-size: 2rem; font-weight: 700; color: var(--navy); }
+    .stat-label { font-size: 0.8rem; color: #94a3b8; margin-top: 0.25rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="/">GammaMetric</a>
+</header>
+
+<div class="container">
+  <div class="check">✓</div>
+  <h1>Study complete</h1>
+  <p class="subtitle">
+    Thank you{% if participant %}, {{ participant.name }}{% endif %}.
+    Your responses have been recorded.
+  </p>
+
+  <div class="card" style="text-align:center">
+    <div class="stat">{{ n_completed }} / {{ n_total }}</div>
+    <div class="stat-label">cases completed</div>
+  </div>
+
+  <div class="card">
+    <h2>What happens next</h2>
+    <p>Your responses are stored securely and will be analyzed as part of the
+    GammaMetric pilot reader study. Results will be shared with participants
+    after the study is complete.</p>
+    <p style="margin-top:0.75rem">If you have colleagues who might be interested in participating,
+    please direct them to <strong>dose.gammametric.com/study</strong>.</p>
+  </div>
+
+  <div class="card">
+    <h2>Questions or feedback</h2>
+    <p>Contact Dan Soliman at
+    <a href="mailto:dgsoliman@gmail.com" style="color:var(--blue)">dgsoliman@gmail.com</a>.
+    Interface feedback is especially welcome — this is a pilot.</p>
+  </div>
+</div>
+
+</body>
+</html>

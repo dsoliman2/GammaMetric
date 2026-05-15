@@ -103,6 +103,36 @@ class StudyResult(Base):
     alerted               = Column(Boolean, default=False)
 
 
+class ReaderStudyParticipant(Base):
+    __tablename__ = "reader_study_participants"
+
+    token          = Column(String, primary_key=True)
+    name           = Column(String, nullable=False)
+    role           = Column(String, nullable=False)
+    institution    = Column(String, default="")
+    case_order     = Column(Text)   # JSON list of case indices (0-14)
+    flag_assignment = Column(Text)  # JSON dict: case_idx -> bool (show_flag)
+    created_at     = Column(DateTime, default=datetime.utcnow)
+    completed_at   = Column(DateTime, nullable=True)
+
+    responses = relationship("ReaderStudyResponse", back_populates="participant",
+                             order_by="ReaderStudyResponse.case_idx")
+
+
+class ReaderStudyResponse(Base):
+    __tablename__ = "reader_study_responses"
+
+    id                  = Column(Integer, primary_key=True)
+    participant_token   = Column(String, ForeignKey("reader_study_participants.token"), nullable=False)
+    case_idx            = Column(Integer, nullable=False)
+    show_flag           = Column(Boolean, nullable=False)
+    management_decision = Column(String, nullable=False)
+    response_time_sec   = Column(Float, nullable=True)
+    created_at          = Column(DateTime, default=datetime.utcnow)
+
+    participant = relationship("ReaderStudyParticipant", back_populates="responses")
+
+
 def init_db():
     Base.metadata.create_all(bind=engine)
 
