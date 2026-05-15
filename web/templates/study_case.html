@@ -123,25 +123,39 @@
     .ai-card {
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 1rem;
+      overflow: hidden;
     }
+    .ai-img-wrap {
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 200px;
+    }
+    .ai-img-wrap img {
+      height: 200px;
+      width: 200px;
+      object-fit: cover;
+      display: block;
+    }
+    .ai-card-body { padding: 0.85rem 1rem; }
     .ai-card-label {
       font-size: 0.72rem;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.05em;
       color: #64748b;
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.35rem;
     }
     .ai-acq {
       font-size: 0.75rem;
       color: #94a3b8;
-      margin-bottom: 0.75rem;
+      margin-bottom: 0.6rem;
     }
     .ai-result {
       font-size: 1rem;
       font-weight: 700;
-      margin-bottom: 0.4rem;
+      margin-bottom: 0.3rem;
     }
     .ai-result.detected   { color: var(--green); }
     .ai-result.not-detected { color: var(--red); }
@@ -291,26 +305,36 @@
       <div class="ai-grid">
 
         <div class="ai-card">
-          <div class="ai-card-label">Prior CT — 1.25 mm</div>
-          <div class="ai-acq">Standard kernel · ~10 mGy</div>
-          {% if case.prior_det %}
-          <div class="ai-result detected">Detected</div>
-          <div class="ai-conf">Confidence: <span>{{ (case.prior_conf * 100) | int }}%</span></div>
-          {% else %}
-          <div class="ai-result not-detected">Not detected</div>
-          {% endif %}
+          <div class="ai-img-wrap">
+            <img src="{{ img_prior }}" alt="Prior CT axial slice">
+          </div>
+          <div class="ai-card-body">
+            <div class="ai-card-label">Prior CT — 1.25 mm</div>
+            <div class="ai-acq">Standard kernel · ~10 mGy</div>
+            {% if case.prior_det %}
+            <div class="ai-result detected">Detected</div>
+            <div class="ai-conf">Confidence: <span>{{ (case.prior_conf * 100) | int }}%</span></div>
+            {% else %}
+            <div class="ai-result not-detected">Not detected</div>
+            {% endif %}
+          </div>
         </div>
 
         <div class="ai-card">
-          <div class="ai-card-label">Follow-up CT — 5 mm</div>
-          <div class="ai-acq">Standard kernel · ~10 mGy</div>
-          {% if case.fu_det %}
-          <div class="ai-result detected">Detected</div>
-          <div class="ai-conf">Confidence: <span>{{ (case.fu_conf * 100) | int }}%</span></div>
-          {% else %}
-          <div class="ai-result not-detected">Not detected</div>
-          <div class="ai-conf">Confidence: <span>—</span></div>
-          {% endif %}
+          <div class="ai-img-wrap">
+            <img src="{{ img_fu }}" alt="Follow-up CT axial slice">
+          </div>
+          <div class="ai-card-body">
+            <div class="ai-card-label">Follow-up CT — 5 mm</div>
+            <div class="ai-acq">Standard kernel · ~10 mGy</div>
+            {% if case.fu_det %}
+            <div class="ai-result detected">Detected</div>
+            <div class="ai-conf">Confidence: <span>{{ (case.fu_conf * 100) | int }}%</span></div>
+            {% else %}
+            <div class="ai-result not-detected">Not detected</div>
+            <div class="ai-conf">Confidence: <span>—</span></div>
+            {% endif %}
+          </div>
         </div>
 
       </div>

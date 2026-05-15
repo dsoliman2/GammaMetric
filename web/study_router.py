@@ -199,6 +199,7 @@ def study_case(
     case = STUDY_CASES[case_idx]
     show_flag = assignment[str(case_idx)]
 
+    img_base = f"/static/study_images/{case['case_id']}_n{case['nodule_idx']}"
     return templates.TemplateResponse(request, "study_case.html", {
         "token":      token,
         "n":          n,
@@ -207,6 +208,8 @@ def study_case(
         "show_flag":  show_flag,
         "case_idx":   case_idx,
         "progress":   round(100 * (n - 1) / N_CASES),
+        "img_prior":  img_base + "_prior.png",
+        "img_fu":     img_base + "_fu.png",
     })
 
 
