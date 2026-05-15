@@ -8,7 +8,7 @@ import json
 import platform
 from datetime import datetime
 
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text, ForeignKey, Boolean, Float
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text, ForeignKey, Boolean, Float, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker, relationship
 
 _default_db = "sqlite:///./leapfrogdose.db" if platform.system() == "Windows" else "sqlite:////tmp/leapfrogdose.db"
@@ -127,6 +127,7 @@ class ReaderStudyResponse(Base):
     case_idx            = Column(Integer, nullable=False)
     show_flag           = Column(Boolean, nullable=False)
     management_decision = Column(String, nullable=False)
+    confidence_rating   = Column(Integer, nullable=True)
     response_time_sec   = Column(Float, nullable=True)
     created_at          = Column(DateTime, default=datetime.utcnow)
 
@@ -135,6 +136,12 @@ class ReaderStudyResponse(Base):
 
 def init_db():
     Base.metadata.create_all(bind=engine)
+    with engine.connect() as conn:
+        try:
+            conn.execute(text("ALTER TABLE reader_study_responses ADD COLUMN confidence_rating INTEGER"))
+            conn.commit()
+        except Exception:
+            pass
 
 
 def get_db():

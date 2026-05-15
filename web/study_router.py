@@ -221,6 +221,7 @@ def study_case_submit(
     case_idx: int = Form(...),
     show_flag: bool = Form(...),
     management_decision: str = Form(...),
+    confidence_rating: int = Form(default=0),
     response_time_sec: float = Form(default=0.0),
     db: Session = Depends(get_db),
 ):
@@ -238,8 +239,10 @@ def study_case_submit(
         .filter_by(participant_token=token, case_idx=case_idx)
         .first()
     )
+    conf = confidence_rating if 1 <= confidence_rating <= 5 else None
     if existing:
         existing.management_decision = management_decision
+        existing.confidence_rating = conf
         existing.response_time_sec = response_time_sec
         existing.show_flag = show_flag
     else:
@@ -248,6 +251,7 @@ def study_case_submit(
             case_idx=case_idx,
             show_flag=show_flag,
             management_decision=management_decision,
+            confidence_rating=conf,
             response_time_sec=response_time_sec,
         ))
     db.commit()
@@ -280,7 +284,7 @@ def study_complete(token: str, request: Request, db: Session = Depends(get_db)):
 def study_results(request: Request, db: Session = Depends(get_db)):
     """Raw TSV export — no auth for now (URL security only)."""
     rows = db.query(ReaderStudyResponse).all()
-    lines = ["participant_token\tcase_idx\tcase_id\tdiam_mm\tcomparability\tfu_det\tshow_flag\tdecision\ttime_sec"]
+    lines = ["participant_token\tcase_idx\tcase_id\tdiam_mm\tcomparability\tfu_det\tshow_flag\tdecision\tconfidence\ttime_sec"]
     for r in rows:
         c = STUDY_CASES[r.case_idx]
         lines.append("\t".join([
@@ -292,6 +296,7 @@ def study_results(request: Request, db: Session = Depends(get_db)):
             str(c["fu_det"]),
             str(r.show_flag),
             r.management_decision,
+            str(r.confidence_rating) if r.confidence_rating else "",
             f"{r.response_time_sec:.1f}" if r.response_time_sec else "0",
         ]))
     from fastapi.responses import PlainTextResponse

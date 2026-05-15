@@ -220,6 +220,30 @@
     .radio-label-text { font-size: 0.9rem; font-weight: 600; color: #1e293b; }
     .radio-label-sub  { font-size: 0.78rem; color: #64748b; margin-top: 0.1rem; }
 
+    /* Confidence scale */
+    .confidence-block { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--border); }
+    .confidence-label { font-size: 0.82rem; font-weight: 700; color: #374151; margin-bottom: 0.65rem; }
+    .confidence-scale {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .conf-btn {
+      flex: 1;
+      padding: 0.55rem 0;
+      border: 1.5px solid var(--border);
+      border-radius: 7px;
+      background: #fff;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: #374151;
+      transition: border-color 0.12s, background 0.12s, color 0.12s;
+      font-family: inherit;
+    }
+    .conf-btn:hover { border-color: var(--blue); background: #eff6ff; }
+    .conf-btn.selected { border-color: var(--blue); background: var(--blue); color: #fff; }
+    .conf-anchors { display: flex; justify-content: space-between; font-size: 0.7rem; color: #94a3b8; margin-top: 0.3rem; }
+
     /* Submit */
     .submit-row { margin-top: 1.25rem; }
     .btn {
@@ -410,6 +434,19 @@
           </div>
         </label>
 
+        <div class="confidence-block">
+          <div class="confidence-label">How trustworthy is this longitudinal comparison?</div>
+          <div class="confidence-scale" id="confScale">
+            <button type="button" class="conf-btn" data-val="1">1</button>
+            <button type="button" class="conf-btn" data-val="2">2</button>
+            <button type="button" class="conf-btn" data-val="3">3</button>
+            <button type="button" class="conf-btn" data-val="4">4</button>
+            <button type="button" class="conf-btn" data-val="5">5</button>
+          </div>
+          <div class="conf-anchors"><span>Not at all</span><span>Completely</span></div>
+          <input type="hidden" name="confidence_rating" id="confRating" value="0">
+        </div>
+
         <div class="submit-row">
           <button class="btn" type="submit" id="submitBtn" disabled>
             {% if n < total %}Next case →{% else %}Complete study →{% endif %}
@@ -427,7 +464,24 @@
 
   const radios = document.querySelectorAll('input[type="radio"]');
   const btn = document.getElementById('submitBtn');
-  radios.forEach(r => r.addEventListener('change', () => { btn.disabled = false; }));
+  let confSelected = false;
+
+  function checkReady() {
+    const radioOk = [...radios].some(r => r.checked);
+    btn.disabled = !(radioOk && confSelected);
+  }
+
+  radios.forEach(r => r.addEventListener('change', checkReady));
+
+  document.querySelectorAll('.conf-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.conf-btn').forEach(x => x.classList.remove('selected'));
+      b.classList.add('selected');
+      document.getElementById('confRating').value = b.dataset.val;
+      confSelected = true;
+      checkReady();
+    });
+  });
 
   document.getElementById('caseForm').addEventListener('submit', () => {
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
