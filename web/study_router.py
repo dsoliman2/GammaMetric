@@ -27,80 +27,95 @@ STUDY_CASES = [
     # ── Controls: detected in both conditions ─────────────────────────────────
     {
         "case_id": "LIDC-IDRI-0006", "nodule_idx": 1, "diam_mm": 8.4,
-        "prior_det": True,  "fu_det": True,  "comparability": "GREEN",
-        "detail": "Follow-up acquisition supports direct comparison. d/D = 0.60 at 5 mm — nodule adequately sampled.",
+        "prior_det": True,  "fu_det": True,  "prior_conf": 0.91, "fu_conf": 0.88,
+        "comparability": "GREEN",
+        "detail": "Follow-up acquisition supports direct comparison. d/D = 0.60 at 5 mm — nodule adequately sampled. AI sensitivity within expected range.",
     },
     {
         "case_id": "LIDC-IDRI-0011", "nodule_idx": 0, "diam_mm": 9.4,
-        "prior_det": True,  "fu_det": True,  "comparability": "GREEN",
-        "detail": "Follow-up acquisition supports direct comparison. d/D = 0.53 at 5 mm — nodule adequately sampled.",
+        "prior_det": True,  "fu_det": True,  "prior_conf": 0.94, "fu_conf": 0.90,
+        "comparability": "GREEN",
+        "detail": "Follow-up acquisition supports direct comparison. d/D = 0.53 at 5 mm — nodule adequately sampled. AI sensitivity within expected range.",
     },
     {
         "case_id": "LIDC-IDRI-0012", "nodule_idx": 2, "diam_mm": 7.1,
-        "prior_det": True,  "fu_det": True,  "comparability": "GREEN",
+        "prior_det": True,  "fu_det": True,  "prior_conf": 0.87, "fu_conf": 0.83,
+        "comparability": "GREEN",
         "detail": "Follow-up acquisition supports direct comparison. d/D = 0.70 at 5 mm — nodule adequately sampled.",
     },
     {
         "case_id": "LIDC-IDRI-0005", "nodule_idx": 1, "diam_mm": 7.3,
-        "prior_det": True,  "fu_det": True,  "comparability": "GREEN",
+        "prior_det": True,  "fu_det": True,  "prior_conf": 0.89, "fu_conf": 0.85,
+        "comparability": "GREEN",
         "detail": "Follow-up acquisition supports direct comparison. d/D = 0.68 at 5 mm — nodule adequately sampled.",
     },
     # ── Borderline: detected in both but high d/D ─────────────────────────────
     {
         "case_id": "LIDC-IDRI-0035", "nodule_idx": 0, "diam_mm": 4.9,
-        "prior_det": True,  "fu_det": True,  "comparability": "YELLOW",
-        "detail": "Follow-up used 5 mm reconstruction. d/D = 1.02 for a 4.9 mm nodule — near the undersampled threshold. AI sensitivity estimated at 74% (vs 91% at standard). Detection does not exclude interval change.",
+        "prior_det": True,  "fu_det": True,  "prior_conf": 0.78, "fu_conf": 0.57,
+        "comparability": "YELLOW",
+        "detail": "Follow-up used 5 mm reconstruction. d/D = 1.02 for a 4.9 mm nodule — at the undersampled threshold. AI sensitivity estimated at 74% (vs 91% at standard). A positive detection does not exclude interval growth; a miss at this d/D would not confirm regression.",
     },
     {
         "case_id": "LIDC-IDRI-0012", "nodule_idx": 5, "diam_mm": 5.2,
-        "prior_det": True,  "fu_det": True,  "comparability": "YELLOW",
-        "detail": "Follow-up used 5 mm reconstruction. d/D = 0.96 for a 5.2 mm nodule — approaching the undersampled boundary. AI sensitivity estimated at 76% (vs 91% at standard).",
+        "prior_det": True,  "fu_det": True,  "prior_conf": 0.81, "fu_conf": 0.61,
+        "comparability": "YELLOW",
+        "detail": "Follow-up used 5 mm reconstruction. d/D = 0.96 for a 5.2 mm nodule — approaching the undersampled boundary. AI sensitivity estimated at 76% (vs 91% at standard). Longitudinal comparison has reduced reliability at this acquisition.",
     },
     {
         "case_id": "LIDC-IDRI-0039", "nodule_idx": 0, "diam_mm": 4.2,
-        "prior_det": True,  "fu_det": True,  "comparability": "YELLOW",
-        "detail": "Follow-up used 5 mm reconstruction. d/D = 1.19 for a 4.2 mm nodule — undersampled regime. AI sensitivity estimated at 63% (vs 91% at standard). Detection at follow-up is reassuring but does not fully exclude interval change.",
+        "prior_det": True,  "fu_det": True,  "prior_conf": 0.74, "fu_conf": 0.53,
+        "comparability": "YELLOW",
+        "detail": "Follow-up used 5 mm reconstruction. d/D = 1.19 for a 4.2 mm nodule — undersampled regime. AI sensitivity estimated at 63% (vs 91% at standard). Detection at follow-up is reassuring but the low confidence and acquisition constraints limit the strength of this comparison.",
     },
     # ── Key scenario: detected at baseline, missed at 5 mm ────────────────────
     {
         "case_id": "LIDC-IDRI-0008", "nodule_idx": 0, "diam_mm": 6.6,
-        "prior_det": True,  "fu_det": False, "comparability": "RED",
-        "detail": "Follow-up used 5 mm reconstruction. d/D = 0.76 for a 6.6 mm nodule. AI sensitivity estimated at 68% (vs 91% at standard). Non-detection is consistent with acquisition-related sensitivity loss; true regression cannot be confirmed from this series.",
+        "prior_det": True,  "fu_det": False, "prior_conf": 0.85, "fu_conf": None,
+        "comparability": "RED",
+        "detail": "Follow-up used 5 mm reconstruction. d/D = 0.76 for a 6.6 mm nodule. AI sensitivity estimated at 68% (vs 91% at standard). Non-detection is consistent with acquisition-related sensitivity loss; true regression cannot be confirmed from this series alone.",
     },
     {
         "case_id": "LIDC-IDRI-0008", "nodule_idx": 1, "diam_mm": 7.8,
-        "prior_det": True,  "fu_det": False, "comparability": "RED",
-        "detail": "Follow-up used 5 mm reconstruction. d/D = 0.64 for a 7.8 mm nodule. AI sensitivity estimated at 72% (vs 91% at standard). Non-detection may reflect acquisition sensitivity; independent review recommended.",
+        "prior_det": True,  "fu_det": False, "prior_conf": 0.88, "fu_conf": None,
+        "comparability": "RED",
+        "detail": "Follow-up used 5 mm reconstruction. d/D = 0.64 for a 7.8 mm nodule. AI sensitivity estimated at 72% (vs 91% at standard). Non-detection may reflect acquisition sensitivity loss rather than true interval change.",
     },
     {
         "case_id": "LIDC-IDRI-0012", "nodule_idx": 3, "diam_mm": 7.4,
-        "prior_det": True,  "fu_det": False, "comparability": "RED",
-        "detail": "Follow-up used 5 mm reconstruction. d/D = 0.68 for a 7.4 mm nodule. Estimated AI sensitivity 70% (vs 91%). Non-detection at follow-up is not sufficient to confirm interval regression.",
+        "prior_det": True,  "fu_det": False, "prior_conf": 0.86, "fu_conf": None,
+        "comparability": "RED",
+        "detail": "Follow-up used 5 mm reconstruction. d/D = 0.68 for a 7.4 mm nodule. Estimated AI sensitivity 70% (vs 91%). Non-detection at follow-up is not sufficient to confirm interval regression given this acquisition.",
     },
     {
         "case_id": "LIDC-IDRI-0034", "nodule_idx": 0, "diam_mm": 4.0,
-        "prior_det": True,  "fu_det": False, "comparability": "RED",
-        "detail": "Follow-up used 5 mm reconstruction. d/D = 1.25 for a 4.0 mm nodule — undersampled regime. Estimated AI sensitivity 59% (vs 91%). Non-detection highly consistent with acquisition-related miss for a nodule of this size.",
+        "prior_det": True,  "fu_det": False, "prior_conf": 0.71, "fu_conf": None,
+        "comparability": "RED",
+        "detail": "Follow-up used 5 mm reconstruction. d/D = 1.25 for a 4.0 mm nodule — undersampled regime. Estimated AI sensitivity 59% (vs 91%). Non-detection is highly consistent with an acquisition-related miss for a nodule of this size.",
     },
     {
         "case_id": "LIDC-IDRI-0039", "nodule_idx": 1, "diam_mm": 3.4,
-        "prior_det": True,  "fu_det": False, "comparability": "RED",
-        "detail": "Follow-up used 5 mm reconstruction. d/D = 1.47 for a 3.4 mm nodule — well into the undersampled regime. Estimated AI sensitivity 55% (vs 91%). Non-detection at follow-up is expected given acquisition parameters.",
+        "prior_det": True,  "fu_det": False, "prior_conf": 0.65, "fu_conf": None,
+        "comparability": "RED",
+        "detail": "Follow-up used 5 mm reconstruction. d/D = 1.47 for a 3.4 mm nodule — well into the undersampled regime. Estimated AI sensitivity 55% (vs 91%). Non-detection at this acquisition is the expected outcome for a nodule of this size; true regression cannot be inferred.",
     },
     {
         "case_id": "LIDC-IDRI-0039", "nodule_idx": 3, "diam_mm": 6.6,
-        "prior_det": True,  "fu_det": False, "comparability": "RED",
-        "detail": "Follow-up used 5 mm reconstruction. d/D = 0.76 for a 6.6 mm nodule. Estimated AI sensitivity 68% (vs 91%). Non-detection may reflect acquisition sensitivity loss.",
+        "prior_det": True,  "fu_det": False, "prior_conf": 0.83, "fu_conf": None,
+        "comparability": "RED",
+        "detail": "Follow-up used 5 mm reconstruction. d/D = 0.76 for a 6.6 mm nodule. Estimated AI sensitivity 68% (vs 91%). Non-detection may reflect acquisition sensitivity loss rather than true interval change.",
     },
     {
         "case_id": "LIDC-IDRI-0046", "nodule_idx": 5, "diam_mm": 6.7,
-        "prior_det": True,  "fu_det": False, "comparability": "RED",
-        "detail": "Follow-up used 5 mm reconstruction. d/D = 0.75 for a 6.7 mm nodule. Estimated AI sensitivity 68% (vs 91%). Non-detection consistent with acquisition-related sensitivity reduction.",
+        "prior_det": True,  "fu_det": False, "prior_conf": 0.82, "fu_conf": None,
+        "comparability": "RED",
+        "detail": "Follow-up used 5 mm reconstruction. d/D = 0.75 for a 6.7 mm nodule. Estimated AI sensitivity 68% (vs 91%). Non-detection is consistent with acquisition-related sensitivity reduction for this nodule size.",
     },
     {
         "case_id": "LIDC-IDRI-0004", "nodule_idx": 0, "diam_mm": 6.6,
-        "prior_det": True,  "fu_det": False, "comparability": "RED",
-        "detail": "Follow-up used 5 mm reconstruction. d/D = 0.76 for a 6.6 mm nodule. Estimated AI sensitivity 68% (vs 91%). AI non-detection at follow-up does not confirm nodule regression.",
+        "prior_det": True,  "fu_det": False, "prior_conf": 0.84, "fu_conf": None,
+        "comparability": "RED",
+        "detail": "Follow-up used 5 mm reconstruction. d/D = 0.76 for a 6.6 mm nodule. Estimated AI sensitivity 68% (vs 91%). AI non-detection at follow-up does not confirm nodule regression given this acquisition.",
     },
 ]
 
@@ -210,7 +225,7 @@ def study_case_submit(
     if not participant:
         return RedirectResponse("/study", status_code=302)
 
-    valid_decisions = {"surveillance", "shorten", "escalate"}
+    valid_decisions = {"surveillance", "shorten", "escalate", "thin_slice"}
     if management_decision not in valid_decisions:
         return RedirectResponse(f"/study/{token}/case/{n}", status_code=302)
 

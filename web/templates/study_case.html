@@ -27,89 +27,166 @@
     }
     header a { color: #fff; text-decoration: none; font-weight: 700; font-size: 1rem; }
     .progress-text { color: #94a3b8; font-size: 0.85rem; }
-
     .progress-bar-wrap { background: #1e3a5f; height: 4px; }
     .progress-bar { background: #3b82f6; height: 4px; transition: width 0.3s; }
 
-    .container { max-width: 780px; margin: 2rem auto; padding: 0 1.5rem 4rem; }
+    .container { max-width: 760px; margin: 2rem auto; padding: 0 1.5rem 4rem; }
 
-    .case-header { margin-bottom: 1.5rem; }
-    .case-header h1 { font-size: 1.25rem; font-weight: 700; color: var(--navy); }
-    .case-header p { font-size: 0.85rem; color: #64748b; margin-top: 0.25rem; }
-
-    .scan-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1rem;
-      margin-bottom: 1.25rem;
-    }
-    @media (max-width: 580px) { .scan-grid { grid-template-columns: 1fr; } }
-
-    .scan-card {
+    /* Section chrome */
+    .section {
       background: #fff;
       border: 1px solid var(--border);
       border-radius: 10px;
-      padding: 1.25rem;
+      margin-bottom: 1rem;
+      overflow: hidden;
     }
-    .scan-card h2 {
-      font-size: 0.8rem;
+    .section-head {
+      padding: 0.65rem 1.25rem;
+      background: #f1f5f9;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .section-num {
+      width: 1.4rem; height: 1.4rem;
+      background: var(--navy);
+      color: #fff;
+      border-radius: 50%;
+      font-size: 0.7rem;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .section-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #374151;
+    }
+    .section-body { padding: 1.25rem; }
+
+    /* ── Section 1: Clinical Context ── */
+    .timeline {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 1rem;
+    }
+    .timeline-step {
+      flex: 1;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      font-size: 0.82rem;
+    }
+    .timeline-step .tl-label {
+      font-weight: 700;
+      color: var(--navy);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.25rem;
+    }
+    .timeline-step .tl-val { color: #374151; }
+    .timeline-arrow {
+      padding: 0 0.5rem;
+      color: #94a3b8;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+    .nodule-row {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .nodule-chip {
+      background: #f1f5f9;
+      border-radius: 6px;
+      padding: 0.4rem 0.75rem;
+      font-size: 0.82rem;
+    }
+    .nodule-chip .chip-label { color: #64748b; font-size: 0.72rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.04em; display: block; margin-bottom: 0.1rem; }
+    .nodule-chip .chip-val { font-weight: 700; color: #1e293b; }
+
+    /* ── Section 2: AI Detection ── */
+    .ai-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    @media (max-width: 540px) { .ai-grid { grid-template-columns: 1fr; } }
+
+    .ai-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+    }
+    .ai-card-label {
+      font-size: 0.72rem;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.05em;
       color: #64748b;
-      margin-bottom: 0.75rem;
+      margin-bottom: 0.5rem;
     }
-    .acq-params {
-      font-size: 0.78rem;
+    .ai-acq {
+      font-size: 0.75rem;
       color: #94a3b8;
       margin-bottom: 0.75rem;
     }
-
-    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
-    th { text-align: left; font-weight: 600; color: #374151; padding: 0.4rem 0.5rem;
-         border-bottom: 2px solid var(--border); }
-    td { padding: 0.45rem 0.5rem; border-bottom: 1px solid #f1f5f9; }
-
-    .detected-yes { color: var(--green); font-weight: 600; }
-    .detected-no  { color: var(--red); font-weight: 600; }
-
-    /* Acquisition flag */
-    .flag-box {
-      border-radius: 8px;
-      padding: 0.9rem 1.1rem;
-      margin-bottom: 1.25rem;
-      font-size: 0.875rem;
-      line-height: 1.55;
+    .ai-result {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
     }
-    .flag-green  { background: #f0fdf4; border: 1px solid #86efac; }
-    .flag-yellow { background: #fefce8; border: 1px solid #fde047; }
-    .flag-red    { background: #fff1f2; border: 1px solid #fca5a5; }
+    .ai-result.detected   { color: var(--green); }
+    .ai-result.not-detected { color: var(--red); }
+    .ai-conf {
+      font-size: 0.8rem;
+      color: #64748b;
+    }
+    .ai-conf span { font-weight: 600; color: #374151; }
 
-    .flag-label {
+    /* ── Section 3: Acquisition Reliability ── */
+    .acq-hidden {
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 0.82rem;
+      font-style: italic;
+    }
+
+    .acq-badge {
       display: inline-flex;
       align-items: center;
       gap: 0.4rem;
       font-weight: 700;
-      font-size: 0.8rem;
-      padding: 0.25rem 0.75rem;
+      font-size: 0.78rem;
+      padding: 0.3rem 0.85rem;
       border-radius: 99px;
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.75rem;
     }
-    .flag-label-green  { background: #dcfce7; color: #15803d; }
-    .flag-label-yellow { background: #fef9c3; color: #a16207; }
-    .flag-label-red    { background: #fee2e2; color: #b91c1c; }
+    .badge-green  { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+    .badge-yellow { background: #fef9c3; color: #a16207; border: 1px solid #fde047; }
+    .badge-red    { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
 
-    .flag-detail { color: #475569; }
-
-    /* Decision */
-    .decision-card {
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 1.5rem;
+    .acq-panel {
+      border-radius: 8px;
+      padding: 1rem 1.1rem;
     }
-    .decision-card h2 { font-size: 0.95rem; font-weight: 700; color: var(--navy); margin-bottom: 1rem; }
+    .acq-panel-green  { background: #f0fdf4; border: 1px solid #86efac; }
+    .acq-panel-yellow { background: #fefce8; border: 1px solid #fde047; }
+    .acq-panel-red    { background: #fff1f2; border: 1px solid #fca5a5; }
 
+    .acq-detail { font-size: 0.875rem; color: #374151; line-height: 1.6; }
+
+    /* ── Section 4: Management ── */
     .radio-option {
       display: flex;
       align-items: flex-start;
@@ -117,7 +194,7 @@
       padding: 0.75rem 1rem;
       border: 1.5px solid var(--border);
       border-radius: 8px;
-      margin-bottom: 0.65rem;
+      margin-bottom: 0.6rem;
       cursor: pointer;
       transition: border-color 0.15s, background 0.15s;
     }
@@ -125,10 +202,11 @@
       border-color: var(--blue);
       background: #eff6ff;
     }
-    .radio-option input[type="radio"] { margin-top: 2px; accent-color: var(--blue); flex-shrink: 0; }
-    .radio-option .label-text { font-size: 0.9rem; font-weight: 600; color: #1e293b; }
-    .radio-option .label-sub  { font-size: 0.8rem; color: #64748b; margin-top: 0.1rem; }
+    .radio-option input[type="radio"] { margin-top: 3px; accent-color: var(--blue); flex-shrink: 0; }
+    .radio-label-text { font-size: 0.9rem; font-weight: 600; color: #1e293b; }
+    .radio-label-sub  { font-size: 0.78rem; color: #64748b; margin-top: 0.1rem; }
 
+    /* Submit */
     .submit-row { margin-top: 1.25rem; }
     .btn {
       background: var(--blue);
@@ -144,6 +222,11 @@
     }
     .btn:hover { background: #1d4ed8; }
     .btn:disabled { background: #94a3b8; cursor: not-allowed; }
+
+    /* Case header */
+    .case-header { margin-bottom: 1.25rem; }
+    .case-header h1 { font-size: 1.2rem; font-weight: 700; color: var(--navy); }
+    .case-header p { font-size: 0.82rem; color: #64748b; margin-top: 0.2rem; }
   </style>
 </head>
 <body>
@@ -160,112 +243,163 @@
 
   <div class="case-header">
     <h1>Case {{ n }} of {{ total }}</h1>
-    <p>Review the prior and follow-up CT results below, then record your management recommendation.</p>
+    <p>Review all three panels before recording your management recommendation.</p>
   </div>
 
-  <!-- Scan comparison -->
-  <div class="scan-grid">
-
-    <div class="scan-card">
-      <h2>Prior CT</h2>
-      <div class="acq-params">1.25 mm reconstruction · Standard kernel · ~10 mGy</div>
-      <table>
-        <tr>
-          <th>AI result</th>
-          <th>Diameter</th>
-        </tr>
-        {% if case.prior_det %}
-        <tr>
-          <td class="detected-yes">Detected</td>
-          <td>{{ case.diam_mm }} mm</td>
-        </tr>
-        {% else %}
-        <tr>
-          <td class="detected-no">Not detected</td>
-          <td>—</td>
-        </tr>
-        {% endif %}
-      </table>
+  <!-- ── 1. Clinical Context ─────────────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-num">1</div>
+      <span class="section-title">Clinical Context</span>
     </div>
+    <div class="section-body">
 
-    <div class="scan-card">
-      <h2>Follow-up CT</h2>
-      <div class="acq-params">5 mm reconstruction · Standard kernel · ~10 mGy</div>
-      <table>
-        <tr>
-          <th>AI result</th>
-          <th>Diameter</th>
-        </tr>
-        {% if case.fu_det %}
-        <tr>
-          <td class="detected-yes">Detected</td>
-          <td>{{ case.diam_mm }} mm</td>
-        </tr>
-        {% else %}
-        <tr>
-          <td class="detected-no">Not detected</td>
-          <td>—</td>
-        </tr>
-        {% endif %}
-      </table>
-    </div>
-
-  </div>
-
-  <!-- Acquisition reliability flag (conditional) -->
-  {% if show_flag %}
-  <div class="flag-box flag-{{ case.comparability | lower }}">
-    <div>
-      <span class="flag-label flag-label-{{ case.comparability | lower }}">
-        {% if case.comparability == 'GREEN' %}✓ Comparable acquisition
-        {% elif case.comparability == 'YELLOW' %}⚠ Reduced AI sensitivity
-        {% else %}⚠ Unreliable AI comparison
-        {% endif %}
-      </span>
-    </div>
-    <div class="flag-detail">{{ case.detail }}</div>
-  </div>
-  {% endif %}
-
-  <!-- Management decision -->
-  <div class="decision-card">
-    <h2>Management recommendation</h2>
-
-    <form method="POST" action="/study/{{ token }}/case/{{ n }}" id="caseForm">
-      <input type="hidden" name="case_idx" value="{{ case_idx }}">
-      <input type="hidden" name="show_flag" value="{{ show_flag }}">
-      <input type="hidden" name="response_time_sec" id="responseTime" value="0">
-
-      <label class="radio-option">
-        <input type="radio" name="management_decision" value="surveillance" required>
-        <div>
-          <div class="label-text">Continue routine surveillance</div>
-          <div class="label-sub">Standard follow-up interval per guidelines</div>
+      <div class="timeline">
+        <div class="timeline-step">
+          <div class="tl-label">Prior CT</div>
+          <div class="tl-val">1.25 mm reconstruction<br>Standard kernel · ~10 mGy</div>
         </div>
-      </label>
-
-      <label class="radio-option">
-        <input type="radio" name="management_decision" value="shorten">
-        <div>
-          <div class="label-text">Shorten follow-up interval</div>
-          <div class="label-sub">Earlier repeat CT warranted given findings</div>
+        <div class="timeline-arrow">→</div>
+        <div class="timeline-step">
+          <div class="tl-label">12-month follow-up CT</div>
+          <div class="tl-val">5 mm reconstruction<br>Standard kernel · ~10 mGy</div>
         </div>
-      </label>
-
-      <label class="radio-option">
-        <input type="radio" name="management_decision" value="escalate">
-        <div>
-          <div class="label-text">Escalate workup</div>
-          <div class="label-sub">Biopsy, PET, or specialist referral indicated</div>
-        </div>
-      </label>
-
-      <div class="submit-row">
-        <button class="btn" type="submit" id="submitBtn" disabled>
-          {% if n < total %}Next case →{% else %}Complete study →{% endif %}
-        </button>
       </div>
-    </form>
+
+      <div class="nodule-row">
+        <div class="nodule-chip">
+          <span class="chip-label">Nodule diameter (prior)</span>
+          <span class="chip-val">{{ case.diam_mm }} mm</span>
+        </div>
+        <div class="nodule-chip">
+          <span class="chip-label">Surveillance context</span>
+          <span class="chip-val">Lung-RADS annual follow-up</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── 2. AI Detection Results ────────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-num">2</div>
+      <span class="section-title">AI Detection Results</span>
+    </div>
+    <div class="section-body">
+
+      <div class="ai-grid">
+
+        <div class="ai-card">
+          <div class="ai-card-label">Prior CT — 1.25 mm</div>
+          <div class="ai-acq">Standard kernel · ~10 mGy</div>
+          {% if case.prior_det %}
+          <div class="ai-result detected">Detected</div>
+          <div class="ai-conf">Confidence: <span>{{ (case.prior_conf * 100) | int }}%</span></div>
+          {% else %}
+          <div class="ai-result not-detected">Not detected</div>
+          {% endif %}
+        </div>
+
+        <div class="ai-card">
+          <div class="ai-card-label">Follow-up CT — 5 mm</div>
+          <div class="ai-acq">Standard kernel · ~10 mGy</div>
+          {% if case.fu_det %}
+          <div class="ai-result detected">Detected</div>
+          <div class="ai-conf">Confidence: <span>{{ (case.fu_conf * 100) | int }}%</span></div>
+          {% else %}
+          <div class="ai-result not-detected">Not detected</div>
+          <div class="ai-conf">Confidence: <span>—</span></div>
+          {% endif %}
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── 3. Acquisition Reliability ────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-num">3</div>
+      <span class="section-title">Acquisition Reliability Assessment</span>
+    </div>
+    <div class="section-body">
+
+      {% if show_flag %}
+      <div class="acq-panel acq-panel-{{ case.comparability | lower }}">
+        <div>
+          <span class="acq-badge badge-{{ case.comparability | lower }}">
+            {% if case.comparability == 'GREEN' %}&#10003; Comparable acquisition
+            {% elif case.comparability == 'YELLOW' %}&#9888; Reduced AI sensitivity
+            {% else %}&#9888; Unreliable AI comparison
+            {% endif %}
+          </span>
+        </div>
+        <div class="acq-detail">{{ case.detail }}</div>
+      </div>
+      {% else %}
+      <div class="acq-hidden">
+        Acquisition reliability assessment not available for this case.
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+  <!-- ── 4. Management Recommendation ──────────────────────────────────── -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-num">4</div>
+      <span class="section-title">Management Recommendation</span>
+    </div>
+    <div class="section-body">
+
+      <form method="POST" action="/study/{{ token }}/case/{{ n }}" id="caseForm">
+        <input type="hidden" name="case_idx" value="{{ case_idx }}">
+        <input type="hidden" name="show_flag" value="{{ show_flag }}">
+        <input type="hidden" name="response_time_sec" id="responseTime" value="0">
+
+        <label class="radio-option">
+          <input type="radio" name="management_decision" value="surveillance" required>
+          <div>
+            <div class="radio-label-text">Continue routine surveillance</div>
+            <div class="radio-label-sub">Standard follow-up interval per Lung-RADS guidelines</div>
+          </div>
+        </label>
+
+        <label class="radio-option">
+          <input type="radio" name="management_decision" value="shorten">
+          <div>
+            <div class="radio-label-text">Shorten follow-up interval</div>
+            <div class="radio-label-sub">Earlier repeat CT warranted given findings</div>
+          </div>
+        </label>
+
+        <label class="radio-option">
+          <input type="radio" name="management_decision" value="thin_slice">
+          <div>
+            <div class="radio-label-text">Recommend thin-slice repeat CT</div>
+            <div class="radio-label-sub">Reimage at ≤1.5 mm to confirm comparability before longitudinal interpretation</div>
+          </div>
+        </label>
+
+        <label class="radio-option">
+          <input type="radio" name="management_decision" value="escalate">
+          <div>
+            <div class="radio-label-text">Escalate workup</div>
+            <div class="radio-label-sub">Biopsy, PET, or specialist referral indicated</div>
+          </div>
+        </label>
+
+        <div class="submit-row">
+          <button class="btn" type="submit" id="submitBtn" disabled>
+            {% if n < total %}Next case →{% else %}Complete study →{% endif %}
+          </button>
+        </div>
+      </form>
+
+    </div>
   </div>
 
 </div>
@@ -273,14 +407,10 @@
 <script>
   const startTime = Date.now();
 
-  // Enable submit only when an option is selected
   const radios = document.querySelectorAll('input[type="radio"]');
   const btn = document.getElementById('submitBtn');
-  radios.forEach(r => r.addEventListener('change', () => {
-    btn.disabled = false;
-  }));
+  radios.forEach(r => r.addEventListener('change', () => { btn.disabled = false; }));
 
-  // Record time on submission
   document.getElementById('caseForm').addEventListener('submit', () => {
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     document.getElementById('responseTime').value = elapsed;
