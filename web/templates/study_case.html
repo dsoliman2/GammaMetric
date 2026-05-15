@@ -300,7 +300,7 @@
         <div class="timeline-arrow">→</div>
         <div class="timeline-step">
           <div class="tl-label">12-month follow-up CT</div>
-          <div class="tl-val">5 mm reconstruction<br>Standard kernel · ~10 mGy</div>
+          <div class="tl-val">{{ case.fu_recon_label }} reconstruction<br>Standard kernel · ~10 mGy</div>
         </div>
       </div>
 
@@ -349,7 +349,7 @@
             <img src="{{ img_fu }}" alt="Follow-up CT axial slice">
           </div>
           <div class="ai-card-body">
-            <div class="ai-card-label">Follow-up CT — 5 mm</div>
+            <div class="ai-card-label">Follow-up CT — {{ case.fu_recon_label }}</div>
             <div class="ai-acq">Standard kernel · ~10 mGy</div>
             {% if case.fu_det %}
             <div class="ai-result detected">Detected</div>
