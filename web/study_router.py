@@ -215,7 +215,13 @@ def study_case(
     show_flag = assignment[str(case_idx)]
 
     img_base = f"/static/study_images/{case['case_id']}_n{case['nodule_idx']}"
-    fu_img_suffix = "_prior" if case.get("fu_recon_mm", 5.0) <= 1.25 else "_fu"
+    fu_recon = case.get("fu_recon_mm", 5.0)
+    if fu_recon <= 1.25:
+        fu_img_suffix = "_prior"
+    elif fu_recon <= 2.5:
+        fu_img_suffix = "_fu25"
+    else:
+        fu_img_suffix = "_fu"
     return templates.TemplateResponse(request, "study_case.html", {
         "token":      token,
         "n":          n,
