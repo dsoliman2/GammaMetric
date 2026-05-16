@@ -6,6 +6,7 @@ YELLOW → queued; dispatched via daily digest endpoint
 """
 
 from __future__ import annotations
+import json
 import os
 import logging
 from datetime import datetime, timedelta
@@ -65,10 +66,16 @@ def _driver_pills(result_json_str: Optional[str]) -> str:
         "display:inline-block;background:#3b0e0e;border:1px solid #7f1d1d;"
         "color:#fca5a5;font-size:11px;padding:4px 10px;border-radius:99px;margin:3px 3px 3px 0"
     )
+    PARAM_LABELS = {
+        "slice_thickness": "Slice thickness",
+        "kernel": "Kernel",
+        "dose": "CTDIvol",
+    }
     pills = ""
     for d in drivers:
-        label = d.get("label") or d.get("parameter", "")
-        delta = d.get("delta_pp", 0)
+        raw_param = d.get("parameter", "")
+        label = d.get("label") or PARAM_LABELS.get(raw_param, raw_param)
+        delta = d.get("contribution_pp") or d.get("delta_pp", 0)
         if delta and abs(delta) >= 0.5:
             pills += f'<span style="{pill_style}">{label} &nbsp;{delta:+.1f}pp</span>'
 
