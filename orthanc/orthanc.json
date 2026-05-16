@@ -1,0 +1,24 @@
+{
+  "Name"             : "GammaMetric DICOM Listener",
+  "StorageDirectory" : "/var/lib/orthanc/db",
+  "HttpPort"         : 8042,
+  "DicomPort"        : 4242,
+  "DicomAet"         : "GAMMAMETRIC",
+
+  "RemoteAccessAllowed" : true,
+  "AuthenticationEnabled" : false,
+
+  "Plugins" : [
+    "/usr/share/orthanc/plugins/libOrthancPython.so"
+  ],
+
+  "Python" : {
+    "Path" : "/etc/orthanc/gammametric_plugin.py"
+  },
+
+  "GammaMetric" : {
+    "Url"            : "https://dose.gammametric.com/api/sensitivity/dicom/study",
+    "ApiKey"         : "",
+    "AIModelVersion" : "v1.0.0"
+  }
+}
