@@ -24,6 +24,7 @@ import pandas as pd
 import SimpleITK as sitk
 from scipy.ndimage import sobel, gaussian_filter
 from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import LeaveOneGroupOut
 from sklearn.metrics import classification_report, confusion_matrix
@@ -38,7 +39,7 @@ NIFTI_OUT   = r'G:\GammaMetric\pixel_niftis'
 FEATURES_CSV = r'G:\GammaMetric\pixel_niftis\features.csv'
 RANDOM_SEED = 42
 
-CONDITIONS = ['baseline', 'dose_25pct', 'dose_50pct', 'thick_3mm', 'thick_5mm', 'soft_kernel']
+CONDITIONS = ['baseline', 'dose_25pct', 'dose_50pct', 'thick_3mm', 'thick_5mm', 'soft_kernel', 'sharp_kernel']
 
 CASES = [
     'LIDC-IDRI-0001', 'LIDC-IDRI-0002', 'LIDC-IDRI-0003', 'LIDC-IDRI-0004',
@@ -131,6 +132,24 @@ def apply_soft_kernel(image, sigma_mm=1.5):
     return out
 
 
+def apply_sharp_kernel(image, sigma_mm=0.6, strength=1.8):
+    """
+    Simulate lung/sharp reconstruction kernel via unsharp masking.
+    Enhances edges and high-frequency content, mimicking B50f/B70f behavior.
+    strength: how much high-freq content to add back (1.0 = original + full residual).
+    """
+    spacing = image.GetSpacing()
+    sigma_x = sigma_mm / spacing[0]
+    sigma_y = sigma_mm / spacing[1]
+    arr = sitk.GetArrayFromImage(image).astype(np.float32)
+    blurred = gaussian_filter(arr, sigma=(0, sigma_y, sigma_x))
+    sharpened = arr + strength * (arr - blurred)
+    sharpened = np.clip(sharpened, -1024, 3071)
+    out = sitk.GetImageFromArray(sharpened.astype(np.int16))
+    out.CopyInformation(image)
+    return out
+
+
 def generate_niftis():
     rng = np.random.default_rng(RANDOM_SEED)
     os.makedirs(NIFTI_OUT, exist_ok=True)
@@ -141,18 +160,24 @@ def generate_niftis():
         # For LIDC-0009: use legacy NIfTIs for existing conditions,
         # but generate soft_kernel from the legacy baseline
         if case_id in LEGACY_NIFTIS:
-            soft_path = os.path.join(NIFTI_OUT, f'{case_id}_soft_kernel.nii.gz')
-            if os.path.exists(soft_path):
-                print(f'  [skip] using legacy NIfTIs (soft_kernel exists)')
-            else:
-                baseline_path = LEGACY_NIFTIS[case_id]['baseline']
-                print(f'  generating soft_kernel from legacy baseline...', end=' ', flush=True)
-                try:
-                    img = sitk.ReadImage(baseline_path)
-                    sitk.WriteImage(apply_soft_kernel(img), soft_path)
-                    print(f'done ({os.path.getsize(soft_path)/1e6:.1f} MB)')
-                except Exception as e:
-                    print(f'ERROR: {e}')
+            extra = {'soft_kernel': apply_soft_kernel, 'sharp_kernel': apply_sharp_kernel}
+            baseline_path = LEGACY_NIFTIS[case_id]['baseline']
+            all_done = True
+            for cname, fn in extra.items():
+                p = os.path.join(NIFTI_OUT, f'{case_id}_{cname}.nii.gz')
+                if os.path.exists(p):
+                    print(f'  [skip] {cname}')
+                else:
+                    all_done = False
+                    print(f'  generating {cname} from legacy baseline...', end=' ', flush=True)
+                    try:
+                        img = sitk.ReadImage(baseline_path)
+                        sitk.WriteImage(fn(img), p)
+                        print(f'done ({os.path.getsize(p)/1e6:.1f} MB)')
+                    except Exception as e:
+                        print(f'ERROR: {e}')
+            if all_done:
+                print(f'  [skip] using legacy NIfTIs (kernel variants exist)')
             continue
 
         # Check if all 5 conditions already generated
@@ -193,6 +218,8 @@ def generate_niftis():
                     out = apply_thick_slices(image, 5.0)
                 elif condition == 'soft_kernel':
                     out = apply_soft_kernel(image)
+                elif condition == 'sharp_kernel':
+                    out = apply_sharp_kernel(image)
                 sitk.WriteImage(out, p)
                 print(f'done ({os.path.getsize(p)/1e6:.1f} MB)')
             except Exception as e:
@@ -307,8 +334,9 @@ def extract_all_features():
     for case_id in CASES:
         if case_id in LEGACY_NIFTIS:
             cond_paths = dict(LEGACY_NIFTIS[case_id])
-            # soft_kernel not in legacy paths — generated to NIFTI_OUT
-            cond_paths['soft_kernel'] = os.path.join(NIFTI_OUT, f'{case_id}_soft_kernel.nii.gz')
+            # kernel variants not in legacy paths — generated to NIFTI_OUT
+            cond_paths['soft_kernel']  = os.path.join(NIFTI_OUT, f'{case_id}_soft_kernel.nii.gz')
+            cond_paths['sharp_kernel'] = os.path.join(NIFTI_OUT, f'{case_id}_sharp_kernel.nii.gz')
         else:
             cond_paths = {c: os.path.join(NIFTI_OUT, f'{case_id}_{c}.nii.gz')
                           for c in CONDITIONS}
@@ -375,49 +403,47 @@ def classify(df=None, thin_only=False):
 
     # Leave-one-case-out cross-validation
     logo = LeaveOneGroupOut()
+    lr  = LogisticRegression(max_iter=1000, random_state=RANDOM_SEED, solver='lbfgs')
+    rf  = RandomForestClassifier(n_estimators=200, max_depth=8,
+                                  random_state=RANDOM_SEED, n_jobs=-1)
     scaler = StandardScaler()
-    clf = LogisticRegression(max_iter=1000, random_state=RANDOM_SEED, solver='lbfgs')
 
-    all_true, all_pred = [], []
-    case_ids = np.unique(groups)
+    results = {}
+    for clf_name, clf, needs_scale in [('LogReg', lr, True), ('RandomForest', rf, False)]:
+        all_true, all_pred = [], []
+        for train_idx, test_idx in logo.split(X, y, groups):
+            X_train, X_test = X[train_idx], X[test_idx]
+            y_train, y_test = y[train_idx], y[test_idx]
+            if needs_scale:
+                X_train = scaler.fit_transform(X_train)
+                X_test  = scaler.transform(X_test)
+            clf.fit(X_train, y_train)
+            all_true.extend(y_test)
+            all_pred.extend(clf.predict(X_test))
+        results[clf_name] = (np.array(all_true), np.array(all_pred))
 
-    for train_idx, test_idx in logo.split(X, y, groups):
-        X_train, X_test = X[train_idx], X[test_idx]
-        y_train, y_test = y[train_idx], y[test_idx]
-        X_train_s = scaler.fit_transform(X_train)
-        X_test_s  = scaler.transform(X_test)
-        clf.fit(X_train_s, y_train)
-        preds = clf.predict(X_test_s)
-        all_true.extend(y_test)
-        all_pred.extend(preds)
+    best_acc = 0.0
+    for clf_name, (all_true, all_pred) in results.items():
+        accuracy = (all_true == all_pred).mean()
+        chance = 1 / len(np.unique(all_true))
+        print(f'\n=== {clf_name} — LOCO accuracy: {accuracy:.1%} (chance: {chance:.0%}) ===\n')
+        print(classification_report(all_true, all_pred))
+        print('Per-condition accuracy:')
+        for cond in sorted(np.unique(all_true)):
+            mask = all_true == cond
+            acc = (all_pred[mask] == cond).mean()
+            print(f'  {cond:12s}  {acc:.1%}  (n={mask.sum()})')
+        best_acc = max(best_acc, accuracy)
 
-    all_true = np.array(all_true)
-    all_pred = np.array(all_pred)
-    accuracy = (all_true == all_pred).mean()
-
-    print(f'\n=== Leave-one-case-out accuracy: {accuracy:.1%} (chance: 20%) ===\n')
-    print(classification_report(all_true, all_pred))
-
-    # Per-condition accuracy
-    print('Per-condition accuracy:')
-    all_conditions = sorted(np.unique(all_true))
-    for cond in all_conditions:
-        mask = all_true == cond
-        if mask.sum() == 0:
-            continue
-        acc = (all_pred[mask] == cond).mean()
-        print(f'  {cond:12s}  {acc:.1%}  (n={mask.sum()})')
-
-    # Feature importance (coefficients from final full-data model)
-    X_s = scaler.fit_transform(X)
-    clf.fit(X_s, y)
-    print('\nFeature coefficients (full model):')
+    # Feature importances from RF (full model)
     feat_names = ['noise_std', 'sharpness', 'freq_ratio', 'corr_ratio']
-    for i, cond in enumerate(clf.classes_):
-        coefs = dict(zip(feat_names, clf.coef_[i]))
-        print(f'  {cond:12s}  ' + '  '.join(f'{k}={v:+.3f}' for k, v in coefs.items()))
+    rf.fit(X, y)
+    print('\nRandom forest feature importances:')
+    for name, imp in sorted(zip(feat_names, rf.feature_importances_),
+                            key=lambda x: -x[1]):
+        print(f'  {name:12s}  {imp:.3f}')
 
-    return accuracy
+    return best_acc
 
 
 # ---------------------------------------------------------------------------
