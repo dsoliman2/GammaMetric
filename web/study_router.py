@@ -306,10 +306,14 @@ def study_complete(token: str, request: Request, db: Session = Depends(get_db)):
 def study_results(request: Request, db: Session = Depends(get_db)):
     """Raw TSV export — no auth for now (URL security only)."""
     rows = db.query(ReaderStudyResponse).all()
-    lines = ["participant_token\tcase_idx\tcase_id\tdiam_mm\tfu_recon_mm\tcomparability\tfu_det\tshow_flag\tdecision\tconfidence\ttime_sec"]
+    lines = ["participant_name\trole\tinstitution\tparticipant_token\tcase_idx\tcase_id\tdiam_mm\tfu_recon_mm\tcomparability\tfu_det\tshow_flag\tdecision\tconfidence\ttime_sec"]
     for r in rows:
         c = STUDY_CASES[r.case_idx]
+        p = r.participant
         lines.append("\t".join([
+            p.name if p else "",
+            p.role if p else "",
+            p.institution if p else "",
             r.participant_token[:8],
             str(r.case_idx),
             c["case_id"],
