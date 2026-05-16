@@ -48,56 +48,154 @@ def _send(subject: str, body_text: str, body_html: str) -> bool:
 # RED — immediate
 # ---------------------------------------------------------------------------
 
-def _red_html(study) -> str:
+def _driver_pills(result_json_str: Optional[str]) -> str:
+    if not result_json_str:
+        return ""
+    try:
+        data = json.loads(result_json_str)
+        drivers = data.get("drivers", [])
+        ci = data.get("confidence_interval", [])
+        baseline = data.get("baseline_sensitivity", 0.782)
+    except Exception:
+        return ""
+    if not drivers:
+        return ""
+
+    pill_style = (
+        "display:inline-block;background:#3b0e0e;border:1px solid #7f1d1d;"
+        "color:#fca5a5;font-size:11px;padding:4px 10px;border-radius:99px;margin:3px 3px 3px 0"
+    )
+    pills = ""
+    for d in drivers:
+        label = d.get("label") or d.get("parameter", "")
+        delta = d.get("delta_pp", 0)
+        if delta and abs(delta) >= 0.5:
+            pills += f'<span style="{pill_style}">{label} &nbsp;{delta:+.1f}pp</span>'
+
+    ci_str = ""
+    if ci and len(ci) == 2:
+        ci_str = f'<span style="color:#6b7280;font-size:11px"> &nbsp;CI [{ci[0]:.0%}–{ci[1]:.0%}]</span>'
+    baseline_str = f'<div style="color:#6b7280;font-size:11px;margin-top:3px">baseline {baseline:.1%}{ci_str}</div>'
+
     return f"""
-<html><body style="font-family:Arial,sans-serif;max-width:600px;margin:auto">
-<div style="background:#c0392b;color:white;padding:16px;border-radius:4px">
-  <h2 style="margin:0">&#9888; RED Alert — AI Sensitivity Critically Degraded</h2>
-</div>
-<div style="padding:16px;border:1px solid #ddd;margin-top:8px;border-radius:4px">
-  <p><strong>Study UID:</strong> {study.study_instance_uid}</p>
-  <p><strong>Date:</strong> {study.acquisition_date or 'unknown'}</p>
-  <p><strong>Scanner:</strong> {study.scanner_model or 'unknown'}</p>
-  <table style="border-collapse:collapse;width:100%">
-    <tr style="background:#f5f5f5">
-      <td style="padding:8px;border:1px solid #ddd"><strong>Estimated Sensitivity</strong></td>
-      <td style="padding:8px;border:1px solid #ddd">{study.estimated_sensitivity:.1%}</td>
-    </tr>
-    <tr>
-      <td style="padding:8px;border:1px solid #ddd"><strong>Degradation</strong></td>
-      <td style="padding:8px;border:1px solid #ddd;color:#c0392b"><strong>−{study.degradation_pp:.1f}pp</strong></td>
-    </tr>
-    <tr style="background:#f5f5f5">
-      <td style="padding:8px;border:1px solid #ddd"><strong>Slice Thickness</strong></td>
-      <td style="padding:8px;border:1px solid #ddd">{study.slice_thickness_mm} mm</td>
-    </tr>
-    <tr>
-      <td style="padding:8px;border:1px solid #ddd"><strong>Kernel</strong></td>
-      <td style="padding:8px;border:1px solid #ddd">{study.reconstruction_kernel}</td>
-    </tr>
-    <tr style="background:#f5f5f5">
-      <td style="padding:8px;border:1px solid #ddd"><strong>CTDIvol</strong></td>
-      <td style="padding:8px;border:1px solid #ddd">{study.ctdivol_mgy} mGy</td>
-    </tr>
+    <!-- Drivers -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px">
+     <tr><td>
+      <div style="color:#6b7280;font-size:10px;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px">Drivers</div>
+      {pills}
+     </td></tr>
+    </table>
+    """, baseline_str
+
+
+def _red_html(study) -> str:
+    ts = datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')
+    sens_pct = f"{study.estimated_sensitivity:.0%}"
+    drivers_result = _driver_pills(study.result_json if hasattr(study, 'result_json') else None)
+    drivers_html, baseline_html = drivers_result if isinstance(drivers_result, tuple) else ("", "")
+    return f"""
+<html><body style="margin:0;padding:0;background:#0a0e17;font-family:Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0">
+ <tr><td align="center" style="padding:32px 16px">
+  <table width="600" cellpadding="0" cellspacing="0" style="background:#111827;border-radius:8px;overflow:hidden">
+
+   <!-- Header -->
+   <tr><td style="background:#7f1d1d;padding:20px 28px">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr>
+     <td>
+      <span style="color:#fca5a5;font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:0.1em">GammaMetric</span>
+      <div style="color:#fff;font-size:19px;font-weight:bold;margin-top:5px">Acquisition Reliability Warning</div>
+     </td>
+     <td align="right" valign="middle">
+      <span style="background:#ef4444;color:#fff;padding:5px 13px;border-radius:4px;font-size:12px;font-weight:bold;letter-spacing:0.06em">RED</span>
+     </td>
+    </tr></table>
+   </td></tr>
+
+   <!-- Body -->
+   <tr><td style="padding:24px 28px">
+
+    <!-- Scanner / date -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px">
+     <tr>
+      <td style="color:#6b7280;font-size:11px;text-transform:uppercase;letter-spacing:0.07em;padding-bottom:3px">Scanner</td>
+      <td align="right" style="color:#6b7280;font-size:11px;text-transform:uppercase;letter-spacing:0.07em;padding-bottom:3px">Date</td>
+     </tr>
+     <tr>
+      <td style="color:#f9fafb;font-size:13px">{study.scanner_model or 'unknown'}</td>
+      <td align="right" style="color:#f9fafb;font-size:13px">{study.acquisition_date or '—'}</td>
+     </tr>
+    </table>
+
+    <!-- Metric tiles -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px">
+     <tr>
+      <td width="32%" style="background:#1f2937;padding:14px 12px;border-radius:6px">
+       <div style="color:#6b7280;font-size:10px;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:5px">Est. sensitivity</div>
+       <div style="color:#f9fafb;font-size:22px;font-weight:bold">{sens_pct}</div>
+       {baseline_html}
+      </td>
+      <td width="4%"></td>
+      <td width="32%" style="background:#1f2937;padding:14px 12px;border-radius:6px">
+       <div style="color:#6b7280;font-size:10px;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:5px">Reduction</div>
+       <div style="color:#ef4444;font-size:22px;font-weight:bold">−{study.degradation_pp:.1f}pp</div>
+      </td>
+      <td width="4%"></td>
+      <td width="28%" style="background:#1f2937;padding:14px 12px;border-radius:6px">
+       <div style="color:#6b7280;font-size:10px;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:5px">Slice</div>
+       <div style="color:#f9fafb;font-size:22px;font-weight:bold">{study.slice_thickness_mm}mm</div>
+      </td>
+     </tr>
+    </table>
+
+    <!-- Acquisition params -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px">
+     <tr>
+      <td style="color:#9ca3af;font-size:12px;padding:7px 0;border-bottom:1px solid #1f2937">Kernel</td>
+      <td align="right" style="color:#f9fafb;font-size:12px;padding:7px 0;border-bottom:1px solid #1f2937">{study.reconstruction_kernel}</td>
+     </tr>
+     <tr>
+      <td style="color:#9ca3af;font-size:12px;padding:7px 0;border-bottom:1px solid #1f2937">CTDIvol</td>
+      <td align="right" style="color:#f9fafb;font-size:12px;padding:7px 0;border-bottom:1px solid #1f2937">{study.ctdivol_mgy} mGy</td>
+     </tr>
+     <tr>
+      <td style="color:#9ca3af;font-size:12px;padding:7px 0">Study UID</td>
+      <td align="right" style="color:#6b7280;font-size:11px;padding:7px 0;word-break:break-all">{study.study_instance_uid}</td>
+     </tr>
+    </table>
+
+    {drivers_html}
+
+    <!-- Clinical note -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px">
+     <tr><td style="background:#1a0f0f;border-left:3px solid #ef4444;padding:14px 16px;border-radius:0 4px 4px 0">
+      <p style="color:#fca5a5;font-size:13px;margin:0;line-height:1.65">
+       Estimated AI sensitivity for 3–6 mm nodules is reduced under current acquisition conditions.
+       Interpret longitudinal AI comparisons with caution.
+      </p>
+     </td></tr>
+    </table>
+
+    <!-- Footer -->
+    <p style="color:#374151;font-size:11px;margin:0">GammaMetric AI Reliability Monitor &mdash; {ts}</p>
+
+   </td></tr>
   </table>
-  <p style="margin-top:16px;padding:12px;background:#fdf2f2;border-left:4px solid #c0392b">
-    Sensitivity for 3–6mm nodules is critically degraded under current acquisition parameters.
-    Review protocol immediately. Primary concern: missed nodules in the clinically critical detection window.
-  </p>
-  <p style="color:#666;font-size:12px">GammaMetric AI Reliability Monitor &mdash; {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}</p>
-</div>
+ </td></tr>
+</table>
 </body></html>"""
 
 
 def send_red_alert(study, db: Session) -> bool:
-    subject = f"[RED] AI Sensitivity Alert — {study.degradation_pp:.1f}pp degradation detected"
+    subject = f"[GammaMetric] Acquisition Reliability Warning — {study.degradation_pp:.1f}pp sensitivity reduction"
     text = (
-        f"RED ALERT — AI sensitivity critically degraded.\n\n"
+        f"Acquisition Reliability Warning\n\n"
         f"Study UID: {study.study_instance_uid}\n"
-        f"Degradation: -{study.degradation_pp:.1f}pp\n"
-        f"Estimated sensitivity: {study.estimated_sensitivity:.1%}\n"
+        f"Sensitivity reduction: -{study.degradation_pp:.1f}pp\n"
+        f"Estimated sensitivity: {study.estimated_sensitivity:.0%}\n"
         f"Slice: {study.slice_thickness_mm}mm | Kernel: {study.reconstruction_kernel} | CTDIvol: {study.ctdivol_mgy}mGy\n\n"
-        f"Review acquisition protocol immediately.\n\n"
+        f"Estimated AI sensitivity for 3-6mm nodules is reduced under current acquisition conditions. "
+        f"Interpret longitudinal AI comparisons with caution.\n\n"
         f"GammaMetric AI Reliability Monitor"
     )
     sent = _send(subject, text, _red_html(study))
@@ -112,40 +210,63 @@ def send_red_alert(study, db: Session) -> bool:
 # ---------------------------------------------------------------------------
 
 def _digest_html(studies: list) -> str:
+    ts = datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')
+    count = len(studies)
     rows = ""
     for s in studies:
         rows += f"""
-        <tr>
-          <td style="padding:8px;border:1px solid #ddd">{s.acquisition_date or '—'}</td>
-          <td style="padding:8px;border:1px solid #ddd">{s.study_instance_uid}</td>
-          <td style="padding:8px;border:1px solid #ddd">{s.slice_thickness_mm}mm</td>
-          <td style="padding:8px;border:1px solid #ddd">{s.reconstruction_kernel}</td>
-          <td style="padding:8px;border:1px solid #ddd">{s.ctdivol_mgy}mGy</td>
-          <td style="padding:8px;border:1px solid #ddd;color:#e67e22"><strong>−{s.degradation_pp:.1f}pp</strong></td>
-        </tr>"""
+     <tr>
+      <td style="padding:9px 10px;border-bottom:1px solid #1f2937;color:#9ca3af;font-size:12px">{s.acquisition_date or '—'}</td>
+      <td style="padding:9px 10px;border-bottom:1px solid #1f2937;color:#6b7280;font-size:11px;word-break:break-all">{s.study_instance_uid}</td>
+      <td style="padding:9px 10px;border-bottom:1px solid #1f2937;color:#f9fafb;font-size:12px">{s.slice_thickness_mm}mm</td>
+      <td style="padding:9px 10px;border-bottom:1px solid #1f2937;color:#f9fafb;font-size:12px">{s.reconstruction_kernel}</td>
+      <td style="padding:9px 10px;border-bottom:1px solid #1f2937;color:#f9fafb;font-size:12px">{s.ctdivol_mgy}mGy</td>
+      <td style="padding:9px 10px;border-bottom:1px solid #1f2937;color:#fbbf24;font-size:12px;font-weight:bold">−{s.degradation_pp:.1f}pp</td>
+     </tr>"""
     return f"""
-<html><body style="font-family:Arial,sans-serif;max-width:700px;margin:auto">
-<div style="background:#e67e22;color:white;padding:16px;border-radius:4px">
-  <h2 style="margin:0">&#9888; Daily Digest — {len(studies)} YELLOW {"Study" if len(studies)==1 else "Studies"}</h2>
-</div>
-<div style="padding:16px;border:1px solid #ddd;margin-top:8px;border-radius:4px">
-  <p>The following studies showed moderate AI sensitivity degradation (5–10pp) in the past 24 hours.
-  No immediate action required, but review protocol trends.</p>
-  <table style="border-collapse:collapse;width:100%;margin-top:12px">
-    <tr style="background:#f5f5f5;font-weight:bold">
-      <td style="padding:8px;border:1px solid #ddd">Date</td>
-      <td style="padding:8px;border:1px solid #ddd">Study UID</td>
-      <td style="padding:8px;border:1px solid #ddd">Slice</td>
-      <td style="padding:8px;border:1px solid #ddd">Kernel</td>
-      <td style="padding:8px;border:1px solid #ddd">CTDIvol</td>
-      <td style="padding:8px;border:1px solid #ddd">Degradation</td>
-    </tr>
-    {rows}
+<html><body style="margin:0;padding:0;background:#0a0e17;font-family:Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0">
+ <tr><td align="center" style="padding:32px 16px">
+  <table width="620" cellpadding="0" cellspacing="0" style="background:#111827;border-radius:8px;overflow:hidden">
+
+   <!-- Header -->
+   <tr><td style="background:#78350f;padding:20px 28px">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr>
+     <td>
+      <span style="color:#fcd34d;font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:0.1em">GammaMetric</span>
+      <div style="color:#fff;font-size:19px;font-weight:bold;margin-top:5px">Daily Reliability Digest</div>
+     </td>
+     <td align="right" valign="middle">
+      <span style="background:#f59e0b;color:#111;padding:5px 13px;border-radius:4px;font-size:12px;font-weight:bold;letter-spacing:0.06em">YELLOW &times;{count}</span>
+     </td>
+    </tr></table>
+   </td></tr>
+
+   <!-- Body -->
+   <tr><td style="padding:24px 28px">
+    <p style="color:#9ca3af;font-size:13px;margin:0 0 20px">
+     {count} {'study' if count == 1 else 'studies'} with moderately reduced AI sensitivity (5–10pp) in the past 24 hours.
+     No immediate action required; consider reviewing acquisition protocol trends.
+    </p>
+
+    <!-- Table -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-radius:6px;overflow:hidden">
+     <tr style="background:#1f2937">
+      <td style="padding:9px 10px;color:#6b7280;font-size:10px;text-transform:uppercase;letter-spacing:0.07em">Date</td>
+      <td style="padding:9px 10px;color:#6b7280;font-size:10px;text-transform:uppercase;letter-spacing:0.07em">Study UID</td>
+      <td style="padding:9px 10px;color:#6b7280;font-size:10px;text-transform:uppercase;letter-spacing:0.07em">Slice</td>
+      <td style="padding:9px 10px;color:#6b7280;font-size:10px;text-transform:uppercase;letter-spacing:0.07em">Kernel</td>
+      <td style="padding:9px 10px;color:#6b7280;font-size:10px;text-transform:uppercase;letter-spacing:0.07em">CTDIvol</td>
+      <td style="padding:9px 10px;color:#6b7280;font-size:10px;text-transform:uppercase;letter-spacing:0.07em">Reduction</td>
+     </tr>
+     {rows}
+    </table>
+
+    <p style="color:#374151;font-size:11px;margin:20px 0 0">GammaMetric AI Reliability Monitor &mdash; {ts}</p>
+   </td></tr>
   </table>
-  <p style="color:#666;font-size:12px;margin-top:16px">
-    GammaMetric AI Reliability Monitor &mdash; {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}
-  </p>
-</div>
+ </td></tr>
+</table>
 </body></html>"""
 
 
