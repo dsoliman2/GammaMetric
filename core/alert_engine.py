@@ -51,20 +51,15 @@ def _send(subject: str, body_text: str, body_html: str) -> bool:
 
 def _driver_pills(result_json_str: Optional[str]) -> str:
     if not result_json_str:
-        logger.warning("_driver_pills: result_json_str is empty/None")
         return ""
     try:
         data = json.loads(result_json_str)
         drivers = data.get("drivers", [])
         ci = data.get("confidence_interval", [])
         baseline = data.get("baseline_sensitivity", 0.782)
-        logger.info("_driver_pills: %d drivers, baseline=%.3f, json_preview=%s",
-                    len(drivers), baseline, result_json_str[:120])
-    except Exception as exc:
-        logger.error("_driver_pills: JSON parse failed: %s", exc)
+    except Exception:
         return ""
     if not drivers:
-        logger.warning("_driver_pills: drivers list is empty")
         return ""
 
     pill_style = (
