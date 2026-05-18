@@ -75,12 +75,16 @@ def _diameter_note(result_json_str: Optional[str]) -> str:
                     f"95&nbsp;CI&nbsp;width:&nbsp;{ci:.1f}&nbsp;mm."
                 )
             else:
-                # Soft kernel underestimates — general case
+                # Sharp or soft kernel underestimates
+                mechanism = (
+                    "Edge enhancement from sharp kernel tightens bounding boxes"
+                    if ci < 6 else  # sharp tends to have tighter CI at small sizes
+                    "Blurred edges from soft kernel can cause the detection boundary to contract"
+                )
                 msg = (
                     f"AI-reported nodule diameters may be <strong>underestimated</strong> "
-                    f"(mean {mean:.1f}&nbsp;mm) under current soft reconstruction kernel. "
-                    f"Blurred edges can cause the detection boundary to contract, "
-                    f"especially for nodules &gt;6&nbsp;mm. "
+                    f"(mean {mean:.1f}&nbsp;mm) under current reconstruction kernel. "
+                    f"{mechanism}, especially for nodules &gt;6&nbsp;mm. "
                     f"95&nbsp;CI&nbsp;width:&nbsp;{ci:.1f}&nbsp;mm."
                 )
         elif driver == "slice_thickness":

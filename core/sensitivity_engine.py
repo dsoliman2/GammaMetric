@@ -181,6 +181,14 @@ _DIAM_UNC_KERNEL: dict[str, dict[str, tuple[float, float]]] = {
         "10-20mm": (-0.13, 6.11),
         "20-50mm": (-2.62, 14.86),
     },
+    # Sharp kernel tightens bounding boxes via edge enhancement — consistent underestimation.
+    "SHARP": {
+        "overall": (-0.70, 3.79),
+        "3-6mm":   (-0.12, 0.72),
+        "6-10mm":  (-0.81, 3.68),
+        "10-20mm": (-1.25, 5.42),
+        "20-50mm": (-3.98, 15.18),
+    },
     # STANDARD: no kernel-driven diameter bias (baseline condition)
     "STANDARD": {
         "overall": (0.0, 0.0),
