@@ -171,6 +171,22 @@ _DIAM_UNC_SLICE: dict[float, dict[str, tuple[float, float]]] = {
     },
 }
 
+# Kernel class → size stratum → (mean_shift_mm, uncertainty_95ci_mm)
+# SOFT kernel smooths edges: underestimates large nodules, slight over on small.
+_DIAM_UNC_KERNEL: dict[str, dict[str, tuple[float, float]]] = {
+    "SOFT": {
+        "overall": (-0.12, 4.35),
+        "3-6mm":   ( 0.41, 1.18),
+        "6-10mm":  (-0.12, 3.58),
+        "10-20mm": (-0.13, 6.11),
+        "20-50mm": (-2.62, 14.86),
+    },
+    # STANDARD: no kernel-driven diameter bias (baseline condition)
+    "STANDARD": {
+        "overall": (0.0, 0.0),
+    },
+}
+
 _DIAM_UNC_DOSE: dict[float, dict[str, tuple[float, float]]] = {
     0.75: {  # dose_25pct (7.5 mGy at 10 mGy reference)
         "overall": (0.19, 2.34),
@@ -226,17 +242,20 @@ def compute_diameter_uncertainty(
     slice_thickness_mm: float,
     ctdivol_mgy: float,
     nodule_diameter_mm: Optional[float] = None,
+    kernel_class: str = "STANDARD",
 ) -> dict:
     """
     Empirical AI diameter measurement uncertainty for given CT acquisition parameters.
 
     Returns mean expected shift (positive = overestimation), 95% CI width, size stratum,
-    and dominant driver. Based on 3150 matched LIDC-IDRI pairs (arXiv 2603.26785).
+    and dominant driver. Based on 3799 matched LIDC-IDRI pairs (arXiv 2603.26785).
     """
     key = _size_key(nodule_diameter_mm)
 
+    # Slice contribution
     s_mean, s_ci = _interp_diam(slice_thickness_mm, _DIAM_UNC_SLICE, key)
 
+    # Dose contribution
     dose_frac = ctdivol_mgy / REFERENCE_DOSE_MGY
     dose_xs   = sorted(_DIAM_UNC_DOSE.keys())   # [0.50, 0.75]
     d_mean = d_ci = 0.0
@@ -261,14 +280,24 @@ def compute_diameter_uncertainty(
                     d_mean, d_ci = m0 + t * (m1 - m0), c0 + t * (c1 - c0)
                     break
 
-    combined_ci   = round(math.sqrt(s_ci ** 2 + d_ci ** 2), 2)
-    combined_mean = round(s_mean + d_mean, 2)
+    # Kernel contribution
+    k_mean = k_ci = 0.0
+    kern_entry = _DIAM_UNC_KERNEL.get(kernel_class.upper())
+    if kern_entry:
+        k_mean, k_ci = kern_entry.get(key, kern_entry["overall"])
+
+    combined_ci   = round(math.sqrt(s_ci ** 2 + d_ci ** 2 + k_ci ** 2), 2)
+    combined_mean = round(s_mean + d_mean + k_mean, 2)
+
+    # Dominant driver by individual CI contribution
+    contribs = {"slice_thickness": s_ci, "dose": d_ci, "kernel": k_ci}
+    dominant = max(contribs, key=contribs.get)
 
     return {
         "mean_shift_mm":       combined_mean,
         "uncertainty_95ci_mm": combined_ci,
         "size_stratum":        key,
-        "dominant_driver":     "slice_thickness" if s_ci >= d_ci else "dose",
+        "dominant_driver":     dominant,
     }
 
 
@@ -436,7 +465,9 @@ def compute(inp: SensitivityInput) -> SensitivityResult:
     drivers.sort(key=lambda d: abs(d["contribution_pp"]), reverse=True)
 
     plain = _plain_language(cls, degradation_pp, drivers, "3-6mm", is_ood)
-    diam_unc = compute_diameter_uncertainty(inp.slice_thickness_mm, inp.ctdivol_mgy)
+    diam_unc = compute_diameter_uncertainty(
+        inp.slice_thickness_mm, inp.ctdivol_mgy, kernel_class=kernel_class
+    )
 
     return SensitivityResult(
         model_version=inp.model_version,
