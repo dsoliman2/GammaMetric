@@ -58,20 +58,55 @@ def _diameter_note(result_json_str: Optional[str]) -> str:
         du = data.get("diameter_uncertainty")
         if not du:
             return ""
-        mean = du.get("mean_shift_mm", 0)
-        ci   = du.get("uncertainty_95ci_mm", 0)
+        mean     = du.get("mean_shift_mm", 0)
+        ci       = du.get("uncertainty_95ci_mm", 0)
+        driver   = du.get("dominant_driver", "")
         if abs(mean) < 0.5 and ci < 2.0:
             return ""
-        direction = "overestimated" if mean >= 0 else "underestimated"
-        sign = "+" if mean >= 0 else ""
+
+        if driver == "kernel":
+            if mean > 0:
+                # Soft kernel overestimates small nodules
+                msg = (
+                    f"AI-reported diameters for small nodules may be <strong>overestimated</strong> "
+                    f"(mean +{mean:.1f}&nbsp;mm) under current soft reconstruction kernel. "
+                    f"For larger nodules, diameters may instead be <strong>underestimated</strong> "
+                    f"as blurred edges contract the detection boundary. "
+                    f"95&nbsp;CI&nbsp;width:&nbsp;{ci:.1f}&nbsp;mm."
+                )
+            else:
+                # Soft kernel underestimates — general case
+                msg = (
+                    f"AI-reported nodule diameters may be <strong>underestimated</strong> "
+                    f"(mean {mean:.1f}&nbsp;mm) under current soft reconstruction kernel. "
+                    f"Blurred edges can cause the detection boundary to contract, "
+                    f"especially for nodules &gt;6&nbsp;mm. "
+                    f"95&nbsp;CI&nbsp;width:&nbsp;{ci:.1f}&nbsp;mm."
+                )
+        elif driver == "slice_thickness":
+            sign = "+" if mean >= 0 else ""
+            direction = "overestimated" if mean >= 0 else "underestimated"
+            msg = (
+                f"AI-reported nodule diameters may be <strong>{direction}</strong> "
+                f"(mean {sign}{mean:.1f}&nbsp;mm, 95&nbsp;CI&nbsp;width&nbsp;{ci:.1f}&nbsp;mm) "
+                f"under current slice thickness. Thick slices blur z-boundaries, causing the "
+                f"detector to expand bounding boxes — particularly for nodules &gt;6&nbsp;mm. "
+                f"Longitudinal size comparisons should account for this acquisition-driven variability."
+            )
+        else:
+            sign = "+" if mean >= 0 else ""
+            direction = "overestimated" if mean >= 0 else "underestimated"
+            msg = (
+                f"AI-reported nodule diameters may be {direction} by a mean of {sign}{mean:.1f}&nbsp;mm "
+                f"(95&nbsp;CI&nbsp;width&nbsp;{ci:.1f}&nbsp;mm) under current acquisition conditions. "
+                f"Longitudinal size comparisons should account for this variability."
+            )
+
         return f"""
     <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px">
      <tr><td style="background:#1a1a0f;border-left:3px solid #f59e0b;padding:12px 16px;border-radius:0 4px 4px 0">
       <p style="color:#fcd34d;font-size:12px;margin:0;line-height:1.6">
-       <strong>Diameter measurement uncertainty:</strong>
-       AI-reported nodule diameters may be {direction} by a mean of {sign}{mean:.1f}&nbsp;mm
-       (95&nbsp;CI&nbsp;width&nbsp;{ci:.1f}&nbsp;mm) under current slice thickness.
-       Longitudinal size comparisons should account for this acquisition-driven measurement variability.
+       <strong>Diameter measurement uncertainty:</strong> {msg}
       </p>
      </td></tr>
     </table>"""

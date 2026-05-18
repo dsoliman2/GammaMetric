@@ -28,11 +28,12 @@ MAX_MATCH_MM = 20.0   # max centroid distance for matching
 MIN_DIAM_MM  = 3.0    # ignore tiny detections (likely FPs)
 
 CONDITIONS = {
-    'dose_25pct':  {'ctdivol_mgy': 7.5,  'slice_mm': None, 'kernel': None},
-    'dose_50pct':  {'ctdivol_mgy': 5.0,  'slice_mm': None, 'kernel': None},
-    'thick_3mm':   {'ctdivol_mgy': None, 'slice_mm': 3.0,  'kernel': None},
-    'thick_5mm':   {'ctdivol_mgy': None, 'slice_mm': 5.0,  'kernel': None},
-    'soft_kernel': {'ctdivol_mgy': None, 'slice_mm': None, 'kernel': 'SOFT'},
+    'dose_25pct':   {'ctdivol_mgy': 7.5,  'slice_mm': None, 'kernel': None},
+    'dose_50pct':   {'ctdivol_mgy': 5.0,  'slice_mm': None, 'kernel': None},
+    'thick_3mm':    {'ctdivol_mgy': None, 'slice_mm': 3.0,  'kernel': None},
+    'thick_5mm':    {'ctdivol_mgy': None, 'slice_mm': 5.0,  'kernel': None},
+    'soft_kernel':  {'ctdivol_mgy': None, 'slice_mm': None, 'kernel': 'SOFT'},
+    'sharp_kernel': {'ctdivol_mgy': None, 'slice_mm': None, 'kernel': 'SHARP'},
 }
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
