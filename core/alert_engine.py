@@ -164,13 +164,53 @@ def _driver_pills(result_json_str: Optional[str]) -> str:
     """, baseline_str
 
 
+def _diam_tiles(result_json_str: Optional[str]) -> str:
+    """Returns an extra tile row showing diameter shift + CI, or empty string."""
+    if not result_json_str:
+        return ""
+    try:
+        du = json.loads(result_json_str).get("diameter_uncertainty", {})
+        if not du:
+            return ""
+        mean = du.get("mean_shift_mm", 0)
+        ci   = du.get("uncertainty_95ci_mm", 0)
+        if abs(mean) < 0.5 and ci < 2.0:
+            return ""
+        sign      = "+" if mean >= 0 else ""
+        arrow     = "&#8593;" if mean >= 0 else "&#8595;"  # ↑ / ↓
+        color     = "#f59e0b"   # amber for diameter
+        mean_str  = f"{sign}{mean:.1f}&nbsp;mm"
+        ci_str    = f"{ci:.1f}&nbsp;mm"
+        label_dir = "Overestimated" if mean >= 0 else "Underestimated"
+        return f"""
+    <!-- Diameter uncertainty tiles -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px">
+     <tr>
+      <td width="48%" style="background:#1c1a0a;border:1px solid #78350f;padding:14px 12px;border-radius:6px">
+       <div style="color:#92400e;font-size:10px;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:5px">Diam. shift (mean)</div>
+       <div style="color:{color};font-size:22px;font-weight:bold">{arrow}&nbsp;{mean_str}</div>
+       <div style="color:#6b7280;font-size:11px;margin-top:3px">{label_dir} vs thin-slice baseline</div>
+      </td>
+      <td width="4%"></td>
+      <td width="48%" style="background:#1c1a0a;border:1px solid #78350f;padding:14px 12px;border-radius:6px">
+       <div style="color:#92400e;font-size:10px;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:5px">Diam. 95% CI width</div>
+       <div style="color:{color};font-size:22px;font-weight:bold">{ci_str}</div>
+       <div style="color:#6b7280;font-size:11px;margin-top:3px">Measurement variability range</div>
+      </td>
+     </tr>
+    </table>"""
+    except Exception:
+        return ""
+
+
 def _red_html(study) -> str:
     ts = datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')
     sens_pct = f"{study.estimated_sensitivity:.0%}"
     result_json_str = study.result_json if hasattr(study, 'result_json') else None
     drivers_result = _driver_pills(result_json_str)
     drivers_html, baseline_html = drivers_result if isinstance(drivers_result, tuple) else ("", "")
-    diam_note_html = _diameter_note(result_json_str)
+    diam_note_html  = _diameter_note(result_json_str)
+    diam_tiles_html = _diam_tiles(result_json_str)
     return f"""
 <html><body style="margin:0;padding:0;background:#0a0e17;font-family:Arial,sans-serif">
 <table width="100%" cellpadding="0" cellspacing="0">
@@ -225,6 +265,8 @@ def _red_html(study) -> str:
       </td>
      </tr>
     </table>
+
+    {diam_tiles_html}
 
     <!-- Acquisition params -->
     <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px">
