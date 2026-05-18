@@ -49,6 +49,36 @@ def _send(subject: str, body_text: str, body_html: str) -> bool:
 # RED — immediate
 # ---------------------------------------------------------------------------
 
+def _diameter_note(result_json_str: Optional[str]) -> str:
+    """Returns an HTML note about diameter measurement uncertainty, or empty string."""
+    if not result_json_str:
+        return ""
+    try:
+        data = json.loads(result_json_str)
+        du = data.get("diameter_uncertainty")
+        if not du:
+            return ""
+        mean = du.get("mean_shift_mm", 0)
+        ci   = du.get("uncertainty_95ci_mm", 0)
+        if abs(mean) < 0.5 and ci < 2.0:
+            return ""
+        direction = "overestimated" if mean >= 0 else "underestimated"
+        sign = "+" if mean >= 0 else ""
+        return f"""
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px">
+     <tr><td style="background:#1a1a0f;border-left:3px solid #f59e0b;padding:12px 16px;border-radius:0 4px 4px 0">
+      <p style="color:#fcd34d;font-size:12px;margin:0;line-height:1.6">
+       <strong>Diameter measurement uncertainty:</strong>
+       AI-reported nodule diameters may be {direction} by a mean of {sign}{mean:.1f}&nbsp;mm
+       (95&nbsp;CI&nbsp;width&nbsp;{ci:.1f}&nbsp;mm) under current slice thickness.
+       Longitudinal size comparisons should account for this acquisition-driven measurement variability.
+      </p>
+     </td></tr>
+    </table>"""
+    except Exception:
+        return ""
+
+
 def _driver_pills(result_json_str: Optional[str]) -> str:
     if not result_json_str:
         return ""
@@ -98,8 +128,10 @@ def _driver_pills(result_json_str: Optional[str]) -> str:
 def _red_html(study) -> str:
     ts = datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')
     sens_pct = f"{study.estimated_sensitivity:.0%}"
-    drivers_result = _driver_pills(study.result_json if hasattr(study, 'result_json') else None)
+    result_json_str = study.result_json if hasattr(study, 'result_json') else None
+    drivers_result = _driver_pills(result_json_str)
     drivers_html, baseline_html = drivers_result if isinstance(drivers_result, tuple) else ("", "")
+    diam_note_html = _diameter_note(result_json_str)
     return f"""
 <html><body style="margin:0;padding:0;background:#0a0e17;font-family:Arial,sans-serif">
 <table width="100%" cellpadding="0" cellspacing="0">
@@ -174,7 +206,7 @@ def _red_html(study) -> str:
     {drivers_html}
 
     <!-- Clinical note -->
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px">
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px">
      <tr><td style="background:#1a0f0f;border-left:3px solid #ef4444;padding:14px 16px;border-radius:0 4px 4px 0">
       <p style="color:#fca5a5;font-size:13px;margin:0;line-height:1.65">
        Estimated AI sensitivity for 3–6 mm nodules is reduced under current acquisition conditions.
@@ -182,6 +214,8 @@ def _red_html(study) -> str:
       </p>
      </td></tr>
     </table>
+
+    {diam_note_html}
 
     <!-- Footer -->
     <p style="color:#374151;font-size:11px;margin:0">GammaMetric AI Reliability Monitor &mdash; {ts}</p>
@@ -195,6 +229,18 @@ def _red_html(study) -> str:
 
 def send_red_alert(study, db: Session) -> bool:
     subject = f"[GammaMetric] Acquisition Reliability Warning — {study.degradation_pp:.1f}pp sensitivity reduction"
+    diam_text = ""
+    try:
+        if study.result_json:
+            du = json.loads(study.result_json).get("diameter_uncertainty", {})
+            if du and (abs(du.get("mean_shift_mm", 0)) >= 0.5 or du.get("uncertainty_95ci_mm", 0) >= 2.0):
+                diam_text = (
+                    f"\nDiameter uncertainty: AI diameters may be shifted by "
+                    f"{du['mean_shift_mm']:+.1f}mm (95 CI width {du['uncertainty_95ci_mm']:.1f}mm) "
+                    f"under current slice thickness.\n"
+                )
+    except Exception:
+        pass
     text = (
         f"Acquisition Reliability Warning\n\n"
         f"Study UID: {study.study_instance_uid}\n"
@@ -202,7 +248,7 @@ def send_red_alert(study, db: Session) -> bool:
         f"Estimated sensitivity: {study.estimated_sensitivity:.0%}\n"
         f"Slice: {study.slice_thickness_mm}mm | Kernel: {study.reconstruction_kernel} | CTDIvol: {study.ctdivol_mgy}mGy\n\n"
         f"Estimated AI sensitivity for 3-6mm nodules is reduced under current acquisition conditions. "
-        f"Interpret longitudinal AI comparisons with caution.\n\n"
+        f"Interpret longitudinal AI comparisons with caution.{diam_text}\n\n"
         f"GammaMetric AI Reliability Monitor"
     )
     sent = _send(subject, text, _red_html(study))

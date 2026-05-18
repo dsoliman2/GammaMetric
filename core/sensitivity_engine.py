@@ -13,6 +13,7 @@ parameter space. Do not extrapolate silently — flag OOD inputs explicitly.
 
 from __future__ import annotations
 import logging
+import math
 import warnings
 from dataclasses import dataclass, field
 from typing import Optional
@@ -147,6 +148,131 @@ def delta_dose(ctdivol_mgy: float) -> float:
 
 
 # ---------------------------------------------------------------------------
+# Diameter uncertainty tables  (empirical; 3150 matched LIDC-IDRI nodule pairs)
+# Tuple: (mean_shift_mm, uncertainty_95ci_mm)  — positive = overestimation
+# Slice table: how much the AI over/underestimates diameter at each slice thickness.
+# Dose table: additional bias at reduced dose (keyed by ctdivol/reference fraction).
+# ---------------------------------------------------------------------------
+_DIAM_UNC_SLICE: dict[float, dict[str, tuple[float, float]]] = {
+    1.25: {"overall": (0.0, 0.0)},
+    3.0: {
+        "overall": (0.30, 0.95),
+        "3-6mm":   (0.17, 0.71),
+        "6-10mm":  (0.25, 1.66),
+        "10-20mm": (0.49, 1.07),
+        "20-50mm": (1.12, 10.10),
+    },
+    5.0: {
+        "overall": (1.70, 9.88),
+        "3-6mm":   (0.52, 1.52),
+        "6-10mm":  (1.57, 8.55),
+        "10-20mm": (1.84, 10.69),
+        "20-50mm": (7.85, 33.26),
+    },
+}
+
+_DIAM_UNC_DOSE: dict[float, dict[str, tuple[float, float]]] = {
+    0.75: {  # dose_25pct (7.5 mGy at 10 mGy reference)
+        "overall": (0.19, 2.34),
+        "3-6mm":   (0.00, 1.22),
+        "6-10mm":  (0.08, 1.71),
+        "10-20mm": (0.48, 2.76),
+        "20-50mm": (1.06, 6.41),
+    },
+    0.50: {  # dose_50pct (5.0 mGy)
+        "overall": (-0.02, 1.04),
+        "3-6mm":   (-0.02, 0.83),
+        "6-10mm":  ( 0.02, 0.87),
+        "10-20mm": (-0.03, 1.23),
+        "20-50mm": (-0.28, 1.77),
+    },
+}
+
+
+def _size_key(diameter_mm: Optional[float]) -> str:
+    if diameter_mm is None:
+        return "overall"
+    if diameter_mm < 6:
+        return "3-6mm"
+    if diameter_mm < 10:
+        return "6-10mm"
+    if diameter_mm < 20:
+        return "10-20mm"
+    return "20-50mm"
+
+
+def _interp_diam(x: float, table: dict, key: str) -> tuple[float, float]:
+    xs = sorted(table.keys())
+
+    def _get(k: float) -> tuple[float, float]:
+        d = table[k]
+        return d.get(key, d["overall"])
+
+    if x <= xs[0]:
+        return _get(xs[0])
+    if x >= xs[-1]:
+        return _get(xs[-1])
+    for i in range(len(xs) - 1):
+        lo, hi = xs[i], xs[i + 1]
+        if lo <= x <= hi:
+            t = (x - lo) / (hi - lo)
+            m0, c0 = _get(lo)
+            m1, c1 = _get(hi)
+            return m0 + t * (m1 - m0), c0 + t * (c1 - c0)
+    return _get(xs[-1])
+
+
+def compute_diameter_uncertainty(
+    slice_thickness_mm: float,
+    ctdivol_mgy: float,
+    nodule_diameter_mm: Optional[float] = None,
+) -> dict:
+    """
+    Empirical AI diameter measurement uncertainty for given CT acquisition parameters.
+
+    Returns mean expected shift (positive = overestimation), 95% CI width, size stratum,
+    and dominant driver. Based on 3150 matched LIDC-IDRI pairs (arXiv 2603.26785).
+    """
+    key = _size_key(nodule_diameter_mm)
+
+    s_mean, s_ci = _interp_diam(slice_thickness_mm, _DIAM_UNC_SLICE, key)
+
+    dose_frac = ctdivol_mgy / REFERENCE_DOSE_MGY
+    dose_xs   = sorted(_DIAM_UNC_DOSE.keys())   # [0.50, 0.75]
+    d_mean = d_ci = 0.0
+    if dose_frac < 1.0:
+        if dose_frac <= dose_xs[0]:
+            e = _DIAM_UNC_DOSE[dose_xs[0]]
+            d_mean, d_ci = e.get(key, e["overall"])
+        elif dose_frac >= dose_xs[-1]:
+            t = (dose_frac - dose_xs[-1]) / (1.0 - dose_xs[-1])
+            e = _DIAM_UNC_DOSE[dose_xs[-1]]
+            m0, c0 = e.get(key, e["overall"])
+            d_mean, d_ci = m0 * (1 - t), c0 * (1 - t)
+        else:
+            for i in range(len(dose_xs) - 1):
+                lo, hi = dose_xs[i], dose_xs[i + 1]
+                if lo <= dose_frac <= hi:
+                    t = (dose_frac - lo) / (hi - lo)
+                    le = _DIAM_UNC_DOSE[lo]
+                    he = _DIAM_UNC_DOSE[hi]
+                    m0, c0 = le.get(key, le["overall"])
+                    m1, c1 = he.get(key, he["overall"])
+                    d_mean, d_ci = m0 + t * (m1 - m0), c0 + t * (c1 - c0)
+                    break
+
+    combined_ci   = round(math.sqrt(s_ci ** 2 + d_ci ** 2), 2)
+    combined_mean = round(s_mean + d_mean, 2)
+
+    return {
+        "mean_shift_mm":       combined_mean,
+        "uncertainty_95ci_mm": combined_ci,
+        "size_stratum":        key,
+        "dominant_driver":     "slice_thickness" if s_ci >= d_ci else "dose",
+    }
+
+
+# ---------------------------------------------------------------------------
 # Classification thresholds
 # ---------------------------------------------------------------------------
 def classify(degradation_pp: float) -> str:
@@ -208,6 +334,7 @@ class SensitivityResult:
     drivers: list[dict]
     plain_language: str
     warnings: list[str] = field(default_factory=list)
+    diameter_uncertainty: Optional[dict] = field(default=None)
 
     def to_dict(self) -> dict:
         return {
@@ -223,6 +350,7 @@ class SensitivityResult:
             "drivers":                 self.drivers,
             "plain_language":          self.plain_language,
             "warnings":                self.warnings,
+            "diameter_uncertainty":    self.diameter_uncertainty,
         }
 
 
@@ -308,6 +436,7 @@ def compute(inp: SensitivityInput) -> SensitivityResult:
     drivers.sort(key=lambda d: abs(d["contribution_pp"]), reverse=True)
 
     plain = _plain_language(cls, degradation_pp, drivers, "3-6mm", is_ood)
+    diam_unc = compute_diameter_uncertainty(inp.slice_thickness_mm, inp.ctdivol_mgy)
 
     return SensitivityResult(
         model_version=inp.model_version,
@@ -322,4 +451,5 @@ def compute(inp: SensitivityInput) -> SensitivityResult:
         drivers=drivers,
         plain_language=plain,
         warnings=warn_msgs,
+        diameter_uncertainty=diam_unc,
     )
