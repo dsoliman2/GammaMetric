@@ -111,6 +111,10 @@
     .nodule-chip .chip-label { color: #64748b; font-size: 0.72rem; font-weight: 600;
       text-transform: uppercase; letter-spacing: 0.04em; display: block; margin-bottom: 0.1rem; }
     .nodule-chip .chip-val { font-weight: 700; color: #1e293b; }
+    /* Nodule size: clinical measurement, accented so it is not mistaken for slice thickness */
+    .nodule-chip.measurement { background: #eff6ff; border: 1px solid #bfdbfe; }
+    .nodule-chip.measurement .chip-label { color: #1a56db; }
+    .nodule-chip.measurement .chip-val { font-size: 1.05rem; color: #0f2342; }
 
     /* ── Section 2: AI Detection ── */
     .ai-grid {
@@ -296,19 +300,19 @@
       <div class="timeline">
         <div class="timeline-step">
           <div class="tl-label">Prior CT</div>
-          <div class="tl-val">1.25 mm reconstruction<br>Standard kernel · ~10 mGy</div>
+          <div class="tl-val">Slice thickness: 1.25 mm<br>Standard kernel · ~10 mGy</div>
         </div>
         <div class="timeline-arrow">→</div>
         <div class="timeline-step">
           <div class="tl-label">12-month follow-up CT</div>
-          <div class="tl-val">{{ case.fu_recon_label }} reconstruction<br>Standard kernel · ~10 mGy</div>
+          <div class="tl-val">Slice thickness: {{ case.fu_recon_label }}<br>Standard kernel · ~10 mGy</div>
         </div>
       </div>
 
       <div class="nodule-row">
-        <div class="nodule-chip">
-          <span class="chip-label">Nodule diameter (prior)</span>
-          <span class="chip-val">{{ case.diam_mm }} mm</span>
+        <div class="nodule-chip measurement">
+          <span class="chip-label">Nodule size (prior)</span>
+          <span class="chip-val">{{ case.diam_mm }} mm diameter</span>
         </div>
         <div class="nodule-chip">
           <span class="chip-label">Surveillance context</span>
@@ -334,7 +338,7 @@
             <img src="{{ img_prior }}" alt="Prior CT axial slice">
           </div>
           <div class="ai-card-body">
-            <div class="ai-card-label">Prior CT — 1.25 mm</div>
+            <div class="ai-card-label">Prior CT — 1.25 mm slices</div>
             <div class="ai-acq">Standard kernel · ~10 mGy</div>
             {% if case.prior_det %}
             <div class="ai-result detected">Detected</div>
@@ -350,7 +354,7 @@
             <img src="{{ img_fu }}" alt="Follow-up CT axial slice">
           </div>
           <div class="ai-card-body">
-            <div class="ai-card-label">Follow-up CT — {{ case.fu_recon_label }}</div>
+            <div class="ai-card-label">Follow-up CT — {{ case.fu_recon_label }} slices</div>
             <div class="ai-acq">Standard kernel · ~10 mGy</div>
             {% if case.fu_det %}
             <div class="ai-result detected">Detected</div>
