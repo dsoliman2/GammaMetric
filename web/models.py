@@ -97,10 +97,13 @@ class StudyResult(Base):
     estimated_sensitivity = Column(Float)
     degradation_pp        = Column(Float)
     classification        = Column(String)
-    out_of_distribution   = Column(Boolean, default=False)
-    result_json           = Column(Text)
-    ingested_at           = Column(DateTime, default=datetime.utcnow)
-    alerted               = Column(Boolean, default=False)
+    out_of_distribution       = Column(Boolean, default=False)
+    result_json               = Column(Text)
+    ingested_at               = Column(DateTime, default=datetime.utcnow)
+    alerted                   = Column(Boolean, default=False)
+    iterative_recon_detected  = Column(Boolean, default=False)
+    iterative_recon_level     = Column(String, nullable=True)
+    iterative_recon_method    = Column(String, nullable=True)
 
 
 class ReaderStudyParticipant(Base):
@@ -137,11 +140,17 @@ class ReaderStudyResponse(Base):
 def init_db():
     Base.metadata.create_all(bind=engine)
     with engine.connect() as conn:
-        try:
-            conn.execute(text("ALTER TABLE reader_study_responses ADD COLUMN confidence_rating INTEGER"))
-            conn.commit()
-        except Exception:
-            pass
+        for ddl in [
+            "ALTER TABLE reader_study_responses ADD COLUMN confidence_rating INTEGER",
+            "ALTER TABLE study_results ADD COLUMN iterative_recon_detected BOOLEAN DEFAULT FALSE",
+            "ALTER TABLE study_results ADD COLUMN iterative_recon_level VARCHAR",
+            "ALTER TABLE study_results ADD COLUMN iterative_recon_method VARCHAR",
+        ]:
+            try:
+                conn.execute(text(ddl))
+                conn.commit()
+            except Exception:
+                pass
 
 
 def get_db():

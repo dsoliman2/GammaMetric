@@ -21,7 +21,12 @@ from typing import Optional
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-from core.sensitivity_engine import SensitivityInput, compute as compute_sensitivity
+from core.sensitivity_engine import (
+    SensitivityInput,
+    compute as compute_sensitivity,
+    MID_CONFIDENCE_LO,
+    MID_CONFIDENCE_HI,
+)
 
 RESULTS_BASE       = os.getenv(
     "NODULE_RESULTS_DIR",
@@ -31,6 +36,9 @@ CONF_THRESHOLD     = 0.5
 MATCH_DIST_MM      = 15.0
 # Below this diameter delta, change is indistinguishable from measurement noise
 DIAMETER_NOISE_MM  = 2.0
+
+# Mid-confidence regime constants are imported from core.sensitivity_engine
+# (canonical home). Both Surface A and Surface B use the same thresholds.
 
 # Known acquisition parameters for each experimental condition in this dataset.
 # slice_thickness_mm, reconstruction_kernel, ctdivol_mgy.
@@ -66,6 +74,8 @@ class MatchedPair:
     diameter_delta_mm: float    # study_b.diameter - study_a.diameter
     diameter_delta_pct: float   # relative to study_a
     exceeds_noise: bool         # |delta| > DIAMETER_NOISE_MM
+    kernel_comparability_tier:  str = "GREEN"   # GREEN/YELLOW only meaningful when kernel changes
+    kernel_comparability_note:  str = ""
 
 
 @dataclass
@@ -80,6 +90,9 @@ class LongitudinalResult:
     only_in_b: list[Detection]  # detected in B, missed in A (apparent new nodule)
     comparable: bool            # False if either study is RED (>10pp degradation)
     comparability_note: str
+    kernel_change: bool = False                  # condition_a kernel != condition_b kernel
+    dropout_notes_a: list[str] = field(default_factory=list)  # parallel to only_in_a
+    dropout_notes_b: list[str] = field(default_factory=list)  # parallel to only_in_b
 
 
 # ---------------------------------------------------------------------------
@@ -180,6 +193,55 @@ def match_detections(
 # Acquisition sensitivity
 # ---------------------------------------------------------------------------
 
+def _kernel_pair_comparability(conf_a: float, conf_b: float) -> tuple[str, str]:
+    """
+    Per-nodule comparability tier under cross-kernel comparison.
+
+    ORIGINAL rationale (May 22, RETRACTED 2026-05-29): mid-confidence regime
+    under kernel change showed AUC 0.67-0.71 for displacement->dropout.
+    Bridge claim retracted (Simpson's paradox + mixed-vendor cohort).
+
+    NEW anchor (2026-05-29): on the v3 4-vendor cohort, nodules within 0.5mm
+    of a Lung-RADS diameter boundary reclassify under kernel change at 18-33%
+    per vendor; patient-level Lung-RADS follow-up interval changes occur in
+    7.2% of patients (95% CI 3.9-12.0%). Mid-confidence detections sit in the
+    AI-bbox score band most likely to land near a Lung-RADS boundary, so the
+    YELLOW comparability tier is now justified as "this measurement may shift
+    a Lung-RADS category under cross-kernel comparison" — a measurement-
+    instability claim, NOT a dropout-prediction claim.
+
+    Tier thresholds 0.45/0.80 kept; copy of YELLOW message should be revised
+    to reference category-flip risk, not "latent representational shift."
+    See core/sensitivity_engine.py MID_CONFIDENCE_LO/HI comment for the data
+    + caveats. Returns (tier, plain-language note).
+    """
+    min_conf = min(conf_a, conf_b)
+    if min_conf >= MID_CONFIDENCE_HI:
+        return ("GREEN",
+                f"High-confidence detection on both studies (min conf {min_conf:.2f}); "
+                f"robust to kernel change.")
+    if min_conf >= MID_CONFIDENCE_LO:
+        return ("YELLOW",
+                f"Mid-confidence detection (min conf {min_conf:.2f}) under kernel change; "
+                f"diameter delta should be interpreted with caution — "
+                f"latent representational shift contributes to measurement variability in this regime.")
+    return ("YELLOW",
+            f"Low-confidence detection (min conf {min_conf:.2f}); "
+            f"reproducibility is dominated by threshold marginality regardless of kernel.")
+
+
+def _dropout_kernel_note(conf: float) -> str:
+    """Interpretation for a unilateral detection (apparent dropout) under kernel change."""
+    if conf >= MID_CONFIDENCE_HI:
+        return ("High-confidence detection lost across kernels (conf "
+                f"{conf:.2f}); unusual — warrants direct radiologist review.")
+    if conf >= MID_CONFIDENCE_LO:
+        return ("Apparent dropout consistent with mid-confidence regime "
+                f"(conf {conf:.2f}); kernel-induced representational shift may have contributed.")
+    return ("Near-threshold detection "
+            f"(conf {conf:.2f}); loss likely reflects baseline marginality rather than kernel shift.")
+
+
 def _acq_result(condition: str) -> dict:
     params = CONDITION_ACQ_PARAMS.get(condition)
     if params is None:
@@ -212,10 +274,18 @@ def compare_studies(
 
     matched_raw, only_a, only_b = match_detections(dets_a, dets_b, max_dist_mm)
 
+    kernel_a = (CONDITION_ACQ_PARAMS.get(condition_a) or {}).get('reconstruction_kernel')
+    kernel_b = (CONDITION_ACQ_PARAMS.get(condition_b) or {}).get('reconstruction_kernel')
+    kernel_change = bool(kernel_a and kernel_b and kernel_a != kernel_b)
+
     matched_pairs: list[MatchedPair] = []
     for i, (det_a, det_b, dist) in enumerate(matched_raw):
         delta     = det_b.diameter_mm - det_a.diameter_mm
         delta_pct = (delta / det_a.diameter_mm * 100.0) if det_a.diameter_mm > 0 else 0.0
+        if kernel_change:
+            tier, knote = _kernel_pair_comparability(det_a.confidence, det_b.confidence)
+        else:
+            tier, knote = "GREEN", "Same reconstruction kernel — kernel-shift risk not applicable."
         matched_pairs.append(MatchedPair(
             nodule_id=i + 1,
             study_a=det_a,
@@ -224,7 +294,16 @@ def compare_studies(
             diameter_delta_mm=round(delta, 2),
             diameter_delta_pct=round(delta_pct, 1),
             exceeds_noise=abs(delta) > DIAMETER_NOISE_MM,
+            kernel_comparability_tier=tier,
+            kernel_comparability_note=knote,
         ))
+
+    if kernel_change:
+        dropout_notes_a = [_dropout_kernel_note(d.confidence) for d in only_a]
+        dropout_notes_b = [_dropout_kernel_note(d.confidence) for d in only_b]
+    else:
+        dropout_notes_a = ["" for _ in only_a]
+        dropout_notes_b = ["" for _ in only_b]
 
     acq_a = _acq_result(condition_a)
     acq_b = _acq_result(condition_b)
@@ -254,6 +333,9 @@ def compare_studies(
         only_in_b=only_b,
         comparable=comparable,
         comparability_note=note,
+        kernel_change=kernel_change,
+        dropout_notes_a=dropout_notes_a,
+        dropout_notes_b=dropout_notes_b,
     )
 
 

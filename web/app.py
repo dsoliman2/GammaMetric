@@ -57,7 +57,11 @@ if RESEND_API_KEY:
     resend.api_key = RESEND_API_KEY
 
 # ── App setup ───────────────────────────────────────────────────────────────
-app = FastAPI(title="GammaDose", docs_url=None, redoc_url=None)
+app = FastAPI(
+    title="GammaDose",
+    docs_url="/docs" if os.getenv("ENABLE_DOCS") else None,
+    redoc_url=None,
+)
 app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
 app.include_router(sensitivity_router)
 app.include_router(longitudinal_router)

@@ -114,6 +114,23 @@
     .flag-noise { color: var(--red-text); }
     .flag-ok    { color: var(--muted); }
 
+    .kernel-pill {
+      display: inline-block; padding: 0.15rem 0.55rem; border-radius: 999px;
+      font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em;
+    }
+    .kernel-pill.GREEN  { background: var(--green-bg);  color: var(--green-text); }
+    .kernel-pill.YELLOW { background: var(--yellow-bg); color: var(--yellow-text); }
+    .kernel-pill.RED    { background: var(--red-bg);    color: var(--red-text); }
+
+    .kernel-banner {
+      background: #eef2ff; border: 1px solid #c7d2fe; color: #3730a3;
+      border-radius: 8px; padding: 0.7rem 0.95rem; font-size: 0.82rem;
+      margin-bottom: 1rem; line-height: 1.5;
+    }
+    .kernel-note-line {
+      font-size: 0.78rem; color: var(--slate); margin-top: 0.3rem; line-height: 1.45;
+    }
+
     .delta-warn { color: var(--red-text); font-weight: 600; }
     .delta-ok   { color: #1e293b; }
 
@@ -258,6 +275,16 @@
   <div class="card">
     <p class="card-title">Findings</p>
 
+    {% if result.kernel_change %}
+    <div class="kernel-banner">
+      <strong>Cross-kernel comparison.</strong>
+      Reconstruction kernel differs between studies. Per-nodule comparability below
+      reflects the empirically verified mid-confidence regime where kernel-induced
+      latent representational shift adds independent dropout risk
+      (NLST B30f/B80f, n=258, 2026-05-22).
+    </div>
+    {% endif %}
+
     {% if result.only_in_a %}
     <div class="finding-banner disappearance">
       <p class="finding-title">&#9888; Nodule{% if result.only_in_a|length > 1 %}s{% endif %} Not Detected in Study B &mdash; {{ result.only_in_a|length }} apparent disappearance{% if result.only_in_a|length > 1 %}s{% endif %}</p>
@@ -266,6 +293,9 @@
         Centroid ({{ "%.1f"|format(d.centroid_mm[0]) }}, {{ "%.1f"|format(d.centroid_mm[1]) }}, {{ "%.1f"|format(d.centroid_mm[2]) }}) mm
         &nbsp;&bull;&nbsp; Diameter {{ "%.1f"|format(d.diameter_mm) }} mm
         &nbsp;&bull;&nbsp; Confidence {{ "%.3f"|format(d.confidence) }}
+        {% if result.kernel_change and result.dropout_notes_a and result.dropout_notes_a[loop.index0] %}
+        <div class="kernel-note-line">&#8627; {{ result.dropout_notes_a[loop.index0] }}</div>
+        {% endif %}
       </div>
       {% endfor %}
     </div>
@@ -279,6 +309,9 @@
         Centroid ({{ "%.1f"|format(d.centroid_mm[0]) }}, {{ "%.1f"|format(d.centroid_mm[1]) }}, {{ "%.1f"|format(d.centroid_mm[2]) }}) mm
         &nbsp;&bull;&nbsp; Diameter {{ "%.1f"|format(d.diameter_mm) }} mm
         &nbsp;&bull;&nbsp; Confidence {{ "%.3f"|format(d.confidence) }}
+        {% if result.kernel_change and result.dropout_notes_b and result.dropout_notes_b[loop.index0] %}
+        <div class="kernel-note-line">&#8627; {{ result.dropout_notes_b[loop.index0] }}</div>
+        {% endif %}
       </div>
       {% endfor %}
     </div>
@@ -299,6 +332,9 @@
           <th title="Model detection confidence score (0–1). Higher values indicate stronger detection certainty.">Conf B &#9432;</th>
           <th title="Distance between matched nodule centers in millimeters">Centroid dist &#9432;</th>
           <th>Flag</th>
+          {% if result.kernel_change %}
+          <th title="Per-nodule comparability under cross-kernel comparison">Kernel risk &#9432;</th>
+          {% endif %}
         </tr>
       </thead>
       <tbody>
@@ -319,11 +355,16 @@
           <td class="flag-cell {% if p.exceeds_noise %}flag-noise{% else %}flag-ok{% endif %}">
             {% if p.exceeds_noise %}exceeds noise threshold{% else %}&mdash;{% endif %}
           </td>
+          {% if result.kernel_change %}
+          <td>
+            <span class="kernel-pill {{ p.kernel_comparability_tier }}" title="{{ p.kernel_comparability_note }}">{{ p.kernel_comparability_tier }}</span>
+          </td>
+          {% endif %}
         </tr>
         {% endfor %}
       </tbody>
     </table>
-    <p class="table-legend">Conf = model detection confidence (0–1) &nbsp;&bull;&nbsp; Centroid dist = distance between matched nodule centers</p>
+    <p class="table-legend">Conf = model detection confidence (0–1) &nbsp;&bull;&nbsp; Centroid dist = distance between matched nodule centers{% if result.kernel_change %} &nbsp;&bull;&nbsp; Kernel risk = per-nodule comparability under cross-kernel comparison (hover for detail){% endif %}</p>
     {% else %}
     <p class="empty-state">No matched nodule pairs found for this comparison.</p>
     {% endif %}

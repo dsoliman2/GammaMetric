@@ -310,6 +310,54 @@ def compute_diameter_uncertainty(
 
 
 # ---------------------------------------------------------------------------
+# Detection confidence regime — REANCHORED 2026-05-29
+# ---------------------------------------------------------------------------
+# ORIGINAL anchor (May 22, RETRACTED 2026-05-29): claimed within-band AUC
+# 0.67-0.71 for displacement -> dropout prediction in this score band. That
+# claim does not survive cross-vendor stratification (Simpson's paradox) or
+# stratified re-analysis of the original mixed-vendor cohort. The original
+# p=0.014 came from 4-score-band x 5-layer = 20 implicit comparisons (Bonf
+# p ~ 0.28). See [[feature-space-analysis-results]] bridge-retraction section.
+#
+# NEW anchor (2026-05-29): on the v3 4-vendor cohort (n=737 matched nodules,
+# n=180 patient-scans), Lung-RADS reclassification driven by kernel choice
+# is concentrated at borderline nodules:
+#   - Nodules within 0.5mm of a Lung-RADS diameter boundary: 18-33% kernel-
+#     attributable reclassification per vendor.
+#   - Patient-level Lung-RADS follow-up interval change: 7.2% (95% CI 3.9-12.0%)
+#     pooled. ~1 in 14 patients.
+#   - Rate drops to ~0% for nodules >1mm from any boundary.
+#
+# The MID_CONFIDENCE band (0.45-0.80) is RETAINED with a different rationale:
+# detections in this score band have AI-bbox diameters most likely to fall
+# within 0.5mm of a Lung-RADS boundary, making them the population where the
+# borderline-reclassification finding applies. This is a measurement-instability
+# justification, NOT a dropout-prediction justification. Surface A tier
+# elevation and Surface B per-nodule pills can re-anchor on this finding;
+# do NOT cite "dropout risk" or "displacement adds predictive power" in any
+# clinician-facing copy.
+#
+# Constants kept at 0.45/0.80 for API stability + Surface B helper imports.
+# When product copy is next touched, update tier-elevation message to
+# reference Lung-RADS category-flip rate, not dropout risk.
+#
+# Memory: [[feature-space-analysis-results]] - see "Borderline-nodule Lung-RADS
+# reclassification" section for the new anchor; "Bridge retraction" section
+# for the original retraction.
+MID_CONFIDENCE_LO = 0.45
+MID_CONFIDENCE_HI = 0.80
+
+
+def regime_of(confidence: float) -> str:
+    """Map a detection confidence score to its dropout-vulnerability regime."""
+    if confidence >= MID_CONFIDENCE_HI:
+        return "HIGH_CONFIDENCE"
+    if confidence >= MID_CONFIDENCE_LO:
+        return "MID_CONFIDENCE"
+    return "THRESHOLD_MARGINAL"
+
+
+# ---------------------------------------------------------------------------
 # Classification thresholds
 # ---------------------------------------------------------------------------
 def classify(degradation_pp: float) -> str:
@@ -349,12 +397,23 @@ def _plain_language(
 # Main engine
 # ---------------------------------------------------------------------------
 @dataclass
+class DetectionInput:
+    """One AI detection from the current scan (boxes, scores from inference)."""
+    confidence: float
+    diameter_mm: Optional[float] = None
+    detection_id: Optional[str]  = None   # any caller-supplied identifier
+
+
+@dataclass
 class SensitivityInput:
     slice_thickness_mm: float
     reconstruction_kernel: str
     ctdivol_mgy: float
     scanner_model: str = "unknown"
     model_version: str = "unknown"
+    # Optional context for detection-aware reliability output (Surface A).
+    prior_kernel:  Optional[str]                = None
+    detections:    Optional[list[DetectionInput]] = None
 
 
 @dataclass
@@ -372,6 +431,7 @@ class SensitivityResult:
     plain_language: str
     warnings: list[str] = field(default_factory=list)
     diameter_uncertainty: Optional[dict] = field(default=None)
+    detection_analysis:   Optional[dict] = field(default=None)
 
     def to_dict(self) -> dict:
         return {
@@ -388,7 +448,66 @@ class SensitivityResult:
             "plain_language":          self.plain_language,
             "warnings":                self.warnings,
             "diameter_uncertainty":    self.diameter_uncertainty,
+            "detection_analysis":      self.detection_analysis,
         }
+
+
+def _detection_analysis(
+    detections: list[DetectionInput],
+    current_kernel_class: str,
+    prior_kernel: Optional[str],
+) -> dict:
+    """
+    Classify each detection into a confidence regime and summarize.
+    Adds a kernel_mismatch flag when prior_kernel is given and differs.
+    """
+    per_det: list[dict] = []
+    counts  = {"HIGH_CONFIDENCE": 0, "MID_CONFIDENCE": 0, "THRESHOLD_MARGINAL": 0}
+    for i, d in enumerate(detections):
+        reg = regime_of(d.confidence)
+        counts[reg] += 1
+        per_det.append({
+            "detection_id": d.detection_id if d.detection_id is not None else f"det_{i+1}",
+            "confidence":   round(d.confidence, 3),
+            "diameter_mm":  d.diameter_mm,
+            "regime":       reg,
+        })
+
+    kernel_mismatch = False
+    prior_class = None
+    if prior_kernel:
+        prior_class, _, _ = normalize_kernel(prior_kernel)
+        kernel_mismatch = prior_class != current_kernel_class
+
+    # Vulnerable = mid-confidence under kernel mismatch
+    vulnerable_ids: list[str] = []
+    if kernel_mismatch:
+        for d in per_det:
+            if d["regime"] == "MID_CONFIDENCE":
+                vulnerable_ids.append(d["detection_id"])
+
+    if kernel_mismatch and vulnerable_ids:
+        note = (f"Kernel mismatch with prior ({prior_class} -> {current_kernel_class}). "
+                f"{len(vulnerable_ids)} detection(s) in mid-confidence regime where kernel-induced "
+                f"representational shift contributes to dropout risk: "
+                f"{', '.join(vulnerable_ids)}.")
+    elif kernel_mismatch:
+        note = (f"Kernel mismatch with prior ({prior_class} -> {current_kernel_class}); "
+                f"all detections sit outside the kernel-vulnerable regime "
+                f"(high-confidence or near-threshold).")
+    else:
+        note = "No kernel mismatch with prior; regime classification is informational only."
+
+    return {
+        "detection_count":        len(detections),
+        "regime_counts":          counts,
+        "per_detection":          per_det,
+        "kernel_mismatch":        kernel_mismatch,
+        "prior_kernel_class":     prior_class,
+        "current_kernel_class":   current_kernel_class,
+        "vulnerable_detection_ids": vulnerable_ids,
+        "note":                   note,
+    }
 
 
 def compute(inp: SensitivityInput) -> SensitivityResult:
@@ -472,6 +591,35 @@ def compute(inp: SensitivityInput) -> SensitivityResult:
     # Sort by magnitude descending
     drivers.sort(key=lambda d: abs(d["contribution_pp"]), reverse=True)
 
+    # ── Detection-aware analysis (Surface A) ────────────────────────────────
+    detection_analysis = None
+    if inp.detections:
+        detection_analysis = _detection_analysis(
+            inp.detections, kernel_class, inp.prior_kernel
+        )
+        # Tier elevation rule: kernel mismatch + >=1 vulnerable detection + base GREEN -> YELLOW.
+        # ORIGINAL JUSTIFICATION (May 22, RETRACTED 2026-05-29): mid-confidence regime under
+        # kernel change adds independent dropout-prediction power. That displacement->dropout
+        # bridge does not survive cross-vendor stratification.
+        # NEW JUSTIFICATION (2026-05-29): in the v3 4-vendor cohort, nodules within 0.5mm of
+        # a Lung-RADS diameter boundary reclassify under kernel change at 18-33% per vendor;
+        # patient-level Lung-RADS interval changes occur in 7.2% of patients (CI 3.9-12.0%).
+        # Mid-confidence-band detections are over-represented in the borderline-bbox population,
+        # so kernel-mismatch + mid-confidence is a defensible elevator for "AI may report a
+        # different Lung-RADS category" — a measurement-instability claim, not a dropout-
+        # prediction claim. See MID_CONFIDENCE_LO/HI comment for the data + caveats.
+        # TODO(2026-05-29): update warning message to reference category-flip rate, not
+        # "dropout risk" (current copy still uses the retracted dropout framing).
+        if (detection_analysis["kernel_mismatch"]
+            and detection_analysis["vulnerable_detection_ids"]
+            and cls == "GREEN"):
+            cls = "YELLOW"
+            warn_msgs.append(
+                "Tier elevated GREEN -> YELLOW: kernel mismatch with prior places "
+                f"{len(detection_analysis['vulnerable_detection_ids'])} mid-confidence "
+                "detection(s) at elevated dropout risk."
+            )
+
     plain = _plain_language(cls, degradation_pp, drivers, "3-6mm", is_ood)
     diam_unc = compute_diameter_uncertainty(
         inp.slice_thickness_mm, inp.ctdivol_mgy, kernel_class=kernel_class
@@ -491,4 +639,5 @@ def compute(inp: SensitivityInput) -> SensitivityResult:
         plain_language=plain,
         warnings=warn_msgs,
         diameter_uncertainty=diam_unc,
+        detection_analysis=detection_analysis,
     )

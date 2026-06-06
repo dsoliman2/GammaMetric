@@ -49,6 +49,43 @@ def _send(subject: str, body_text: str, body_html: str) -> bool:
 # RED — immediate
 # ---------------------------------------------------------------------------
 
+def _asir_block(result_json_str: Optional[str]) -> str:
+    """HTML alert block when iterative reconstruction is detected."""
+    if not result_json_str:
+        return ""
+    try:
+        data = json.loads(result_json_str)
+        asir = data.get("iterative_recon", {})
+        if not asir or not asir.get("detected"):
+            return ""
+        level   = asir.get("level") or "unknown level"
+        method  = asir.get("method", "")
+        conf    = asir.get("confidence", 0.0)
+        tag_note = (
+            "Not captured by standard ConvolutionKernel DICOM tag — "
+            "reconstruction strength lives in GE private group (0053,xxxx) only."
+            if method == "pixel" or method == "private_tag"
+            else "Encoded in kernel suffix only; strength level not standardised."
+        )
+        return f"""
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px">
+     <tr><td style="background:#0f1a2e;border-left:3px solid #3b82f6;padding:12px 16px;border-radius:0 4px 4px 0">
+      <p style="color:#93c5fd;font-size:12px;margin:0 0 6px 0;font-weight:bold">
+       Iterative Reconstruction Detected ({level})
+      </p>
+      <p style="color:#bfdbfe;font-size:11px;margin:0;line-height:1.6">
+       {tag_note}<br>
+       Apparent lesion size may differ from FBP baseline by ~0.3&ndash;0.9&nbsp;mm.
+       AI models trained on FBP images encounter a measurably different input
+       distribution on iterative-reconstructed scans (domain AUC&nbsp;&asymp;&nbsp;0.99).
+       Detected via: <strong>{method}</strong> (confidence&nbsp;{conf:.0%}).
+      </p>
+     </td></tr>
+    </table>"""
+    except Exception:
+        return ""
+
+
 def _diameter_note(result_json_str: Optional[str]) -> str:
     """Returns an HTML note about diameter measurement uncertainty, or empty string."""
     if not result_json_str:
@@ -211,6 +248,7 @@ def _red_html(study) -> str:
     drivers_html, baseline_html = drivers_result if isinstance(drivers_result, tuple) else ("", "")
     diam_note_html  = _diameter_note(result_json_str)
     diam_tiles_html = _diam_tiles(result_json_str)
+    asir_html       = _asir_block(result_json_str)
     return f"""
 <html><body style="margin:0;padding:0;background:#0a0e17;font-family:Arial,sans-serif">
 <table width="100%" cellpadding="0" cellspacing="0">
@@ -297,6 +335,8 @@ def _red_html(study) -> str:
     </table>
 
     {diam_note_html}
+
+    {asir_html}
 
     <!-- Footer -->
     <p style="color:#374151;font-size:11px;margin:0">GammaMetric AI Reliability Monitor &mdash; {ts}</p>

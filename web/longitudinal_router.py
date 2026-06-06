@@ -102,6 +102,7 @@ def compare_api(
         "comparability_note":  r.comparability_note,
         "acq_a":               r.acq_a,
         "acq_b":               r.acq_b,
+        "kernel_change":       r.kernel_change,
         "matched": [
             {
                 "nodule_id":          p.nodule_id,
@@ -113,15 +114,19 @@ def compare_api(
                 "confidence_a":       p.study_a.confidence,
                 "confidence_b":       p.study_b.confidence,
                 "exceeds_noise":      p.exceeds_noise,
+                "kernel_comparability_tier": p.kernel_comparability_tier,
+                "kernel_comparability_note": p.kernel_comparability_note,
             }
             for p in r.matched
         ],
         "only_in_a": [
-            {"centroid_mm": d.centroid_mm, "diameter_mm": d.diameter_mm, "confidence": d.confidence}
-            for d in r.only_in_a
+            {"centroid_mm": d.centroid_mm, "diameter_mm": d.diameter_mm,
+             "confidence": d.confidence, "kernel_note": n}
+            for d, n in zip(r.only_in_a, r.dropout_notes_a)
         ],
         "only_in_b": [
-            {"centroid_mm": d.centroid_mm, "diameter_mm": d.diameter_mm, "confidence": d.confidence}
-            for d in r.only_in_b
+            {"centroid_mm": d.centroid_mm, "diameter_mm": d.diameter_mm,
+             "confidence": d.confidence, "kernel_note": n}
+            for d, n in zip(r.only_in_b, r.dropout_notes_b)
         ],
     }
