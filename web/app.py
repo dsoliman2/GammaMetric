@@ -70,7 +70,11 @@ templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
 
 @app.on_event("startup")
 def startup():
-    init_db()
+    try:
+        init_db()
+    except Exception as e:
+        import logging
+        logging.getLogger("uvicorn.error").warning(f"Database init failed (app will run without DB): {e}")
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
