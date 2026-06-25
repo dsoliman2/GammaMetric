@@ -207,6 +207,11 @@ async def index(request: Request, db: Session = Depends(get_db)):
     )
 
 
+@app.get("/reliability", response_class=HTMLResponse)
+async def reliability_demo(request: Request):
+    return templates.TemplateResponse(request, "reliability_demo.html", {})
+
+
 @app.get("/template")
 async def download_template():
     template_path = Path(__file__).parent / "dose_template.csv"

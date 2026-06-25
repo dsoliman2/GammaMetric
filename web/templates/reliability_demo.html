@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GammaMetric — Reliability Report</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #f5f5f7;
+      --surface: #ffffff;
+      --border:  #e5e5e5;
+      --text:    #1d1d1f;
+      --text-2:  #424245;
+      --text-3:  #86868b;
+      --blue:    #0066cc;
+      --red:     #c0392b;  --red-bg: #fff1f1;  --red-bd: #fca5a5;
+      --amber:   #b45309;  --amb-bg: #fffbeb;  --amb-bd: #fde68a;
+      --green:   #1a7f4b;  --grn-bg: #f0fdf4;  --grn-bd: #86efac;
+    }
+
+    body {
+      font-family: -apple-system, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    header {
+      background: rgba(255,255,255,0.88);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      height: 52px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 10;
+    }
+    .logo { display: flex; align-items: center; gap: .5rem; text-decoration: none; }
+    .logo-mark {
+      width: 28px; height: 28px; background: var(--blue); border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .85rem; font-weight: 800; color: white;
+    }
+    .logo-name { font-size: .95rem; font-weight: 600; color: var(--text); }
+    .header-right { font-size: .75rem; color: var(--text-3); }
+
+    .page { max-width: 680px; margin: 0 auto; padding: 2.5rem 1.5rem 5rem; }
+
+    .page-eyebrow {
+      font-size: .72rem; font-weight: 600; letter-spacing: .04em;
+      text-transform: uppercase; color: var(--text-3); margin-bottom: .4rem;
+    }
+    .page-title {
+      font-size: 1.5rem; font-weight: 700; letter-spacing: -.02em;
+      color: var(--text); margin-bottom: 2rem;
+    }
+
+    /* ── Report card ── */
+    .report {
+      background: var(--surface);
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      box-shadow: 0 2px 12px rgba(0,0,0,.06);
+      overflow: hidden;
+      margin-bottom: 1.75rem;
+    }
+
+    .card-header {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .nodule-id {
+      font-size: .68rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--text-3); margin-bottom: .15rem;
+    }
+    .nodule-title { font-size: 1.05rem; font-weight: 700; color: var(--text); }
+    .nodule-sub   { font-size: .78rem; color: var(--text-3); margin-top: .1rem; }
+
+    /* Rows */
+    .row { padding: 1.1rem 1.5rem; border-bottom: 1px solid #f0f0f0; }
+    .row:last-child { border-bottom: none; }
+    .row-label {
+      font-size: .68rem; font-weight: 600; letter-spacing: .05em;
+      text-transform: uppercase; color: var(--text-3); margin-bottom: .6rem;
+    }
+
+    /* ── Two-panel layout ── */
+    .two-panel {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .85rem;
+    }
+
+    .panel {
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel-label {
+      font-size: .65rem; font-weight: 700; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--text-3);
+      margin-bottom: .15rem;
+    }
+    .panel-sublabel {
+      font-size: .62rem; color: var(--text-3); margin-bottom: .55rem;
+    }
+
+    /* Score bar */
+    .score-track {
+      height: 6px; background: #ebebeb; border-radius: 99px; margin-bottom: .4rem;
+    }
+    .score-fill { height: 100%; border-radius: 99px; }
+    .score-fill.low  { background: var(--red); }
+    .score-fill.high { background: var(--green); }
+
+    .score-level {
+      display: inline-block;
+      font-size: 1rem; font-weight: 800; letter-spacing: .04em;
+      text-transform: uppercase; padding: .2rem .65rem;
+      border-radius: 5px; margin-bottom: .6rem;
+    }
+    .score-level.low  { background: var(--red-bg); color: var(--red); }
+    .score-level.high { background: var(--grn-bg); color: var(--green); }
+
+    /* Hero metric (image panel) */
+    .panel-metric {
+      font-size: 1.7rem; font-weight: 800; letter-spacing: -.03em; line-height: 1;
+    }
+    .panel-metric .unit { font-size: .9rem; font-weight: 500; color: var(--text-3); }
+    .panel-metric.low  { color: var(--red); }
+    .panel-metric.high { color: var(--green); }
+    .panel-metric-sub  {
+      font-size: .72rem; color: var(--text-3); margin-top: .15rem; margin-bottom: .75rem;
+    }
+
+    /* AI panel text */
+    .panel-desc {
+      font-size: .8rem; color: var(--text-2); line-height: 1.55; margin-bottom: .6rem; flex: 1;
+    }
+    .panel-note {
+      font-size: .68rem; color: var(--text-3);
+      padding-top: .6rem; border-top: 1px solid #f0f0f0; margin-top: auto;
+    }
+
+    /* Section divider inside panel */
+    .panel-section {
+      font-size: .63rem; font-weight: 600; letter-spacing: .05em;
+      text-transform: uppercase; color: var(--text-3);
+      margin-top: .65rem; margin-bottom: .4rem;
+    }
+
+    /* Drivers */
+    .drivers { display: flex; flex-direction: column; gap: .4rem; }
+    .driver  { display: flex; align-items: flex-start; gap: .45rem; }
+    .driver-icon {
+      width: 20px; height: 20px; border-radius: 5px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .7rem; font-weight: 700; flex-shrink: 0; margin-top: .05rem;
+    }
+    .icon-bad  { background: var(--red-bg); color: var(--red); }
+    .icon-warn { background: var(--amb-bg); color: var(--amber); }
+    .icon-ok   { background: var(--grn-bg); color: var(--green); }
+    .driver-text { font-size: .8rem; color: var(--text-2); line-height: 1.4; }
+
+    /* Impact banner */
+    .impact-banner {
+      border-radius: 9px; padding: .8rem 1rem;
+      font-size: .85rem; line-height: 1.5;
+      display: flex; align-items: flex-start; gap: .6rem; border: 1.5px solid;
+    }
+    .impact-banner.low  { background: var(--red-bg); border-color: var(--red-bd); color: #7f1d1d; }
+    .impact-banner.high { background: var(--grn-bg); border-color: var(--grn-bd); color: #14532d; }
+    .impact-banner strong { display: block; font-weight: 700; margin-bottom: .1rem; }
+    .impact-icon { font-size: 1rem; flex-shrink: 0; margin-top: .05rem; }
+
+    /* Recommendation */
+    .rec-box {
+      border-radius: 8px; background: #f0f7ff;
+      border: 1.5px solid #bfdbfe;
+      padding: .75rem 1rem;
+      font-size: .85rem; color: #1e3a5f; line-height: 1.5;
+    }
+    .rec-box strong { font-weight: 700; color: #1d4ed8; }
+
+    /* Details */
+    details { border-top: 1px solid #f0f0f0; }
+    summary {
+      padding: .75rem 1.5rem; font-size: .78rem; font-weight: 500; color: var(--blue);
+      cursor: pointer; list-style: none; display: flex; align-items: center;
+      gap: .35rem; user-select: none;
+    }
+    summary::-webkit-details-marker { display: none; }
+    summary::before { content: '▶'; font-size: .5rem; color: var(--blue); transition: transform .18s ease; }
+    details[open] summary::before { transform: rotate(90deg); }
+    .details-grid {
+      padding: 0 1.5rem 1.1rem;
+      display: grid; grid-template-columns: auto 1fr;
+      gap: .2rem 1.25rem; align-items: baseline;
+    }
+    .dk { font-size: .71rem; color: var(--text-3); white-space: nowrap; }
+    .dv { font-size: .78rem; color: var(--text-2); }
+    .dv.mono { font-family: "SF Mono","Fira Code","Consolas",monospace; font-size: .7rem; }
+
+    footer {
+      text-align: center; padding: 2rem 1.5rem;
+      font-size: .72rem; color: var(--text-3); border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="/">
+    <div class="logo-mark">&#947;</div>
+    <span class="logo-name">GammaMetric</span>
+  </a>
+  <span class="header-right">Reliability Report &nbsp;&bull;&nbsp; Sample</span>
+</header>
+
+<div class="page">
+  <div class="page-eyebrow">Reliability Report</div>
+  <div class="page-title">Two independent instruments. One acquisition event.</div>
+
+  <!-- ═════════════════════════════
+       REPORT A — LOW
+  ═════════════════════════════ -->
+  <div class="report">
+
+    <div class="card-header">
+      <div class="nodule-id">NOD-001 &nbsp;&middot;&nbsp; RUL</div>
+      <div class="nodule-title">Solid pulmonary nodule &nbsp;&mdash;&nbsp; 7.8 mm</div>
+      <div class="nodule-sub">2026-06-18 &nbsp;&middot;&nbsp; GE Revolution CT &nbsp;&middot;&nbsp; CT Chest LDCT</div>
+    </div>
+
+    <div class="row">
+      <div class="two-panel">
+
+        <div class="panel">
+          <div class="panel-label">Image Reliability</div>
+          <div class="panel-sublabel">Acquisition-induced measurement variability</div>
+          <div class="score-track"><div class="score-fill low" style="width:32%"></div></div>
+          <div class="score-level low">Low</div>
+          <div class="panel-metric low">&plusmn;1.2<span class="unit">mm</span></div>
+          <div class="panel-metric-sub">Expected SD (k=2) &nbsp;&middot;&nbsp; range 6.6–9.0 mm</div>
+          <div class="panel-section">Contributing factors</div>
+          <div class="drivers">
+            <div class="driver">
+              <div class="driver-icon icon-bad">!</div>
+              <div class="driver-text">Soft reconstruction kernel</div>
+            </div>
+            <div class="driver">
+              <div class="driver-icon icon-bad">!</div>
+              <div class="driver-text">Near resolution limit</div>
+            </div>
+            <div class="driver">
+              <div class="driver-icon icon-warn">~</div>
+              <div class="driver-text">Complex boundary geometry</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-label">AI Robustness</div>
+          <div class="panel-sublabel">Protocol estimate &nbsp;&middot;&nbsp; Reference model</div>
+          <div class="score-track"><div class="score-fill low" style="width:29%"></div></div>
+          <div class="score-level low">Low</div>
+          <div class="panel-desc">
+            This model showed large output changes under clinically realistic protocol
+            variations. This acquisition profile falls into a protocol region where the
+            model demonstrated lower robustness during validation.
+          </div>
+          <div class="panel-note">
+            Reference robustness profile &nbsp;&middot;&nbsp; Tested across reconstruction kernel,
+            slice thickness, dose, and vendor variation.
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="row-label">Clinical impact</div>
+      <div class="impact-banner low">
+        <span class="impact-icon">&#9888;</span>
+        <div>
+          <strong>Lung-RADS threshold risk</strong>
+          Diameter range (6.6–9.0 mm) spans the Lung-RADS 2&rarr;3 boundary.
+          Category assignment unreliable without protocol standardization.
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="row-label">Recommendation</div>
+      <div class="rec-box">
+        <strong>Confirm diameter on equivalent reconstruction</strong> before assessing
+        interval growth or upgrading Lung-RADS category.
+      </div>
+    </div>
+
+    <details>
+      <summary>Technical details</summary>
+      <div class="details-grid">
+        <span class="dk">ARS score</span>         <span class="dv">15.4% &nbsp;(95% CI 11.2–19.6%)</span>
+        <span class="dk">Sphericity</span>        <span class="dv">0.412</span>
+        <span class="dk">S/V ratio</span>         <span class="dv">0.81 mm&#x207b;&#xb9;</span>
+        <span class="dk">Boundary &Delta;HU</span> <span class="dv">184.3 HU &nbsp;(mean |&Delta;|, 3-voxel shell)</span>
+        <span class="dk">Kernel / Slice / IR</span><span class="dv">B60f &nbsp;&middot;&nbsp; 5.0 mm &nbsp;&middot;&nbsp; ASIR-V 50%</span>
+        <span class="dk">CTDIvol</span>           <span class="dv">2.1 mGy</span>
+        <span class="dk">Series UID</span>        <span class="dv mono">1.2.840.114350&hellip;4609</span>
+        <span class="dk">Processed</span>         <span class="dv mono">2026-06-18T14:32:07Z &nbsp;&middot;&nbsp; Engine v2.3.1 &nbsp;&middot;&nbsp; RPT-20260618-00274</span>
+      </div>
+    </details>
+
+  </div>
+
+
+  <!-- ═════════════════════════════
+       REPORT B — HIGH
+  ═════════════════════════════ -->
+  <div class="report">
+
+    <div class="card-header">
+      <div class="nodule-id">NOD-002 &nbsp;&middot;&nbsp; LLL</div>
+      <div class="nodule-title">Solid pulmonary nodule &nbsp;&mdash;&nbsp; 18.3 mm</div>
+      <div class="nodule-sub">2026-06-18 &nbsp;&middot;&nbsp; Siemens SOMATOM Force &nbsp;&middot;&nbsp; CT Chest LDCT</div>
+    </div>
+
+    <div class="row">
+      <div class="two-panel">
+
+        <div class="panel">
+          <div class="panel-label">Image Reliability</div>
+          <div class="panel-sublabel">Acquisition-induced measurement variability</div>
+          <div class="score-track"><div class="score-fill high" style="width:88%"></div></div>
+          <div class="score-level high">High</div>
+          <div class="panel-metric high">&plusmn;0.4<span class="unit">mm</span></div>
+          <div class="panel-metric-sub">Expected SD (k=2) &nbsp;&middot;&nbsp; range 17.9–18.7 mm</div>
+          <div class="panel-section">Contributing factors</div>
+          <div class="drivers">
+            <div class="driver">
+              <div class="driver-icon icon-ok">&#10003;</div>
+              <div class="driver-text">Standard reconstruction kernel</div>
+            </div>
+            <div class="driver">
+              <div class="driver-icon icon-ok">&#10003;</div>
+              <div class="driver-text">Well above resolution limit</div>
+            </div>
+            <div class="driver">
+              <div class="driver-icon icon-ok">&#10003;</div>
+              <div class="driver-text">Compact, well-defined boundary</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-label">AI Robustness</div>
+          <div class="panel-sublabel">Protocol estimate &nbsp;&middot;&nbsp; Reference model</div>
+          <div class="score-track"><div class="score-fill high" style="width:91%"></div></div>
+          <div class="score-level high">High</div>
+          <div class="panel-desc">
+            This model showed stable output across clinically realistic protocol
+            variations. This acquisition profile falls into a protocol region where the
+            model demonstrated higher robustness during validation.
+          </div>
+          <div class="panel-note">
+            Reference robustness profile &nbsp;&middot;&nbsp; Tested across reconstruction kernel,
+            slice thickness, dose, and vendor variation.
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="row-label">Clinical impact</div>
+      <div class="impact-banner high">
+        <span class="impact-icon">&#10003;</span>
+        <div>
+          <strong>Low threshold risk</strong>
+          Measurement variability unlikely to affect Lung-RADS category or AI output
+          on repeat or cross-site acquisition.
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="row-label">Recommendation</div>
+      <div class="rec-box">
+        No protocol adjustment required. <strong>Standard interval comparison applies.</strong>
+      </div>
+    </div>
+
+    <details>
+      <summary>Technical details</summary>
+      <div class="details-grid">
+        <span class="dk">ARS score</span>         <span class="dv">1.8% &nbsp;(95% CI 0.4–3.2%)</span>
+        <span class="dk">Sphericity</span>        <span class="dv">0.738</span>
+        <span class="dk">S/V ratio</span>         <span class="dv">0.22 mm&#x207b;&#xb9;</span>
+        <span class="dk">Boundary &Delta;HU</span> <span class="dv">41.2 HU &nbsp;(mean |&Delta;|, 3-voxel shell)</span>
+        <span class="dk">Kernel / Slice / IR</span><span class="dv">B30f &nbsp;&middot;&nbsp; 3.0 mm &nbsp;&middot;&nbsp; ADMIRE 3</span>
+        <span class="dk">CTDIvol</span>           <span class="dv">3.4 mGy</span>
+        <span class="dk">Series UID</span>        <span class="dv mono">1.2.276.0.7230010&hellip;5162</span>
+        <span class="dk">Processed</span>         <span class="dv mono">2026-06-18T14:32:09Z &nbsp;&middot;&nbsp; Engine v2.3.1 &nbsp;&middot;&nbsp; RPT-20260618-00275</span>
+      </div>
+    </details>
+
+  </div>
+
+</div>
+
+<footer>
+  GammaMetric &nbsp;&middot;&nbsp; Engine v2.3.1 &nbsp;&middot;&nbsp; For investigational use only &nbsp;&middot;&nbsp; Not cleared for clinical decision-making
+</footer>
+
+</body>
+</html>
